@@ -1,0 +1,33 @@
+name: Fresh Clone
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 5 * * *"   # daily at 05:00 UTC
+
+# Verifies that a fresh clone can bootstrap and pass verification without
+# any pre-cached state. Catches setup-instruction drift early.
+
+jobs:
+  fresh-clone:
+    name: Fresh clone bootstrap + verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        run: pip install uv==0.5.24
+
+      - name: Bootstrap (no cache)
+        run: make bootstrap
+
+      - name: Activate venv and verify
+        run: |
+          source .venv/bin/activate
+          make verify

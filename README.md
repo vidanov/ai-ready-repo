@@ -76,9 +76,11 @@ scripts/
   eval_tasks/       YAML task definitions for evaluation.
 
 .github/
-  workflows/ci.yml           Runs on every PR.
-  workflows/eval-daily.yml   Runs agent evals on a schedule.
-  CODEOWNERS                 Routes reviews to the right people.
+  workflows/ci.yml              Runs on every PR.
+  workflows/fresh-clone.yml     Verifies bootstrap works from a clean checkout.
+  workflows/security.yml        Dependency review + gitleaks secret scan.
+  workflows/eval-daily.yml      Runs agent evals on a schedule.
+  CODEOWNERS                    Routes reviews to the right people.
 ```
 
 ---
