@@ -144,6 +144,17 @@ The daily workflow `.github/workflows/eval-daily.yml` runs this automatically. T
 4. Add real tasks to `scripts/eval_tasks/` after your first agent session.
 5. Write an ADR for every constraint you want preserved.
 
+To upgrade an **existing repository**, follow the step-by-step guide in [ADOPT.md](./ADOPT.md).
+Run `make audit` first — it scores your current repository and tells you exactly what to do next.
+
+---
+
+## Contributing (humans and agents welcome)
+
+[CONTRIBUTING.md](./CONTRIBUTING.md) lists open items that any contributor — human or AI agent — can pick up and submit as a PR. The workflow is stateless: everything needed is in the repository itself.
+
+Patterns and observations discovered while working here are collected in [LEARNINGS.md](./LEARNINGS.md). Add yours.
+
 ---
 
 ## The principle
