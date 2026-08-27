@@ -1,36 +1,69 @@
 """
 Domain layer: pure business logic, no framework or infrastructure imports.
 
-This module demonstrates a simple value object and domain rule.
+This module demonstrates a simple entity with a state machine and domain rules.
 Replace with your actual domain model.
 """
 
-from dataclasses import dataclass
-from decimal import Decimal
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import Enum
+from uuid import UUID, uuid4
 
 
-@dataclass(frozen=True)
-class Money:
+class OrderStatus(Enum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+
+
+# Valid transitions: maps current status to allowed next statuses.
+_TRANSITIONS: dict[OrderStatus, frozenset[OrderStatus]] = {
+    OrderStatus.PENDING: frozenset({OrderStatus.CONFIRMED, OrderStatus.CANCELLED}),
+    OrderStatus.CONFIRMED: frozenset({OrderStatus.SHIPPED, OrderStatus.CANCELLED}),
+    OrderStatus.SHIPPED: frozenset({OrderStatus.DELIVERED}),
+    OrderStatus.DELIVERED: frozenset(),
+    OrderStatus.CANCELLED: frozenset(),
+}
+
+
+@dataclass
+class Order:
     """
-    Monetary value object.
+    Order aggregate root.
 
-    Uses Decimal to avoid floating-point errors.
-    Never use float for monetary values.
+    Enforces valid status transitions and requires at least one item.
+    Status changes go through transition(), never by direct assignment.
     """
 
-    amount: Decimal
-    currency: str
+    id: UUID = field(default_factory=uuid4)
+    customer_id: str = ""
+    items: list[str] = field(default_factory=list)
+    status: OrderStatus = field(default=OrderStatus.PENDING, init=False)
 
     def __post_init__(self) -> None:
-        if self.amount < Decimal("0"):
-            raise ValueError(f"Amount cannot be negative: {self.amount}")
-        if not self.currency or len(self.currency) != 3:
-            raise ValueError(f"Currency must be a 3-letter ISO code: {self.currency!r}")
+        if not self.customer_id:
+            raise ValueError("customer_id is required")
+        if not self.items:
+            raise ValueError("Order must contain at least one item")
 
-    def add(self, other: "Money") -> "Money":
-        if self.currency != other.currency:
-            raise ValueError(f"Cannot add {self.currency} and {other.currency}")
-        return Money(self.amount + other.amount, self.currency)
+    def transition(self, new_status: OrderStatus) -> None:
+        """Move to new_status if the transition is valid."""
+        allowed = _TRANSITIONS[self.status]
+        if new_status not in allowed:
+            raise ValueError(
+                f"Cannot transition from {self.status.value!r} to {new_status.value!r}. "
+                f"Allowed: {[s.value for s in allowed] or 'none'}"
+            )
+        self.status = new_status
 
-    def __str__(self) -> str:
-        return f"{self.amount:.2f} {self.currency}"
+    def cancel(self) -> None:
+        """Convenience method — cancels if allowed."""
+        self.transition(OrderStatus.CANCELLED)
+
+    def is_terminal(self) -> bool:
+        """Returns True if the order cannot change status further."""
+        return not _TRANSITIONS[self.status]
