@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: uv pip install -e ".[dev]" --system
 
+      - name: Verify (format + lint + typecheck + import-check + tests + ADRs)
+        run: make verify
+
       - name: Format check
         run: make format-check
 

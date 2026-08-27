@@ -92,6 +92,22 @@ verify-fast: format-check lint typecheck ## Fast verification (no tests)
 validate-adrs: ## Validate ADR format and required fields
 	@python scripts/validate_adrs.py
 
+# ── AI-readiness audit ───────────────────────────────────────────────────────
+
+.PHONY: audit
+audit: ## Run AI-readiness audit on this repository
+	@python scripts/ai_readiness_audit.py .
+
+.PHONY: audit-repo
+audit-repo: ## Run AI-readiness audit on another repo (usage: make audit-repo PATH=/path/to/repo)
+	@python scripts/ai_readiness_audit.py $(PATH)
+
+# ── Lint changed files only ──────────────────────────────────────────────────
+
+.PHONY: lint-changed
+lint-changed: ## Lint only files changed since last commit
+	@git diff --name-only HEAD | grep '\.py$$' | xargs --no-run-if-empty uv run ruff check
+
 # ── Evals ────────────────────────────────────────────────────────────────────
 
 .PHONY: eval
