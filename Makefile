@@ -5,7 +5,7 @@
 .PHONY: bootstrap
 bootstrap: ## Set up a fresh development environment from scratch
 	@echo "→ Creating virtual environment..."
-	uv venv --python 3.12
+	uv venv
 	@echo "→ Installing dependencies..."
 	uv pip install -e ".[dev]"
 	@echo "→ Copying .env.example → .env (if not present)..."
@@ -79,7 +79,7 @@ security: ## Run security scan
 # ── Verification ladder ──────────────────────────────────────────────────────
 
 .PHONY: verify
-verify: format-check lint typecheck import-check test ## Run complete verification (same as CI)
+verify: format-check lint typecheck import-check test-unit validate-adrs ## Run complete verification (same as CI)
 	@echo "✓ All checks passed"
 
 .PHONY: verify-fast
@@ -99,8 +99,8 @@ audit: ## Run AI-readiness audit on this repository
 	@python scripts/ai_readiness_audit.py .
 
 .PHONY: audit-repo
-audit-repo: ## Run AI-readiness audit on another repo (usage: make audit-repo PATH=/path/to/repo)
-	@python scripts/ai_readiness_audit.py $(PATH)
+audit-repo: ## Run AI-readiness audit on another repo (usage: make audit-repo REPO=/path/to/repo)
+	@python scripts/ai_readiness_audit.py $(REPO)
 
 # ── Lint changed files only ──────────────────────────────────────────────────
 

@@ -29,6 +29,30 @@ def run(cmd: str, cwd: Path) -> bool:
         return False
 
 
+def _secret_scanning_enabled(cwd: Path) -> bool:
+    """Check GitHub secret scanning via the repo settings API.
+
+    Uses `gh repo view` to get the canonical owner/repo slug, then checks
+    `.security_and_analysis.secret_scanning.status` on the repos endpoint.
+    Falls back to False if gh CLI is unavailable or the repo is not on GitHub.
+    """
+    try:
+        slug_result = subprocess.run(
+            "gh repo view --json nameWithOwner -q .nameWithOwner",
+            shell=True, capture_output=True, text=True, cwd=cwd, timeout=10,
+        )
+        slug = slug_result.stdout.strip()
+        if not slug:
+            return False
+        api_result = subprocess.run(
+            f"gh api repos/{slug} --jq '.security_and_analysis.secret_scanning.status'",
+            shell=True, capture_output=True, text=True, cwd=cwd, timeout=10,
+        )
+        return api_result.stdout.strip() == "enabled"
+    except Exception:
+        return False
+
+
 def audit(root: Path) -> None:
     results: list[tuple[bool, str, str, str]] = []
 
@@ -67,22 +91,24 @@ def audit(root: Path) -> None:
 
     # ── Level 2: Verifiable ──────────────────────────────────────────────────
 
+    pyproject_text = (root / "pyproject.toml").read_text() if (root / "pyproject.toml").exists() else ""
+
     add("L2", "Formatter configured (ruff/black/autopep8)",
         any([
-            run("ruff format --check src 2>/dev/null", root),
+            "tool.ruff" in pyproject_text,
             (root / ".black").exists(),
-            "tool.ruff" in ((root / "pyproject.toml").read_text()
-                            if (root / "pyproject.toml").exists() else ""),
+            run("black --version 2>/dev/null", root),
         ]),
         "uv pip install ruff && add [tool.ruff] to pyproject.toml — see ADOPT.md Step 4")
 
     add("L2", "Linter configured",
         any([
-            run("ruff check src 2>/dev/null", root),
+            "tool.ruff.lint" in pyproject_text,
             (root / ".flake8").exists(),
             (root / "setup.cfg").exists(),
+            "tool.pylint" in pyproject_text,
         ]),
-        "Add ruff lint config to pyproject.toml — see ADOPT.md Step 4")
+        "Add [tool.ruff.lint] section to pyproject.toml — see ADOPT.md Step 4")
 
     add("L2", "Type checker configured (mypy/pyright)",
         any([
@@ -147,10 +173,7 @@ def audit(root: Path) -> None:
         "Create docs/adr/ and add ADRs with Verification sections — see ADOPT.md Step 8")
 
     add("L3", "Secret scanning enabled (GitHub secret scanning or equivalent)",
-        run(
-            "gh api repos/{owner}/{repo}/secret-scanning 2>/dev/null | grep -q enabled",
-            root
-        ) or (root / ".pre-commit-config.yaml").exists(),
+        _secret_scanning_enabled(root) or (root / ".pre-commit-config.yaml").exists(),
         "Enable secret scanning in GitHub Settings → Security")
 
     # ── Level 4: Measured ────────────────────────────────────────────────────
