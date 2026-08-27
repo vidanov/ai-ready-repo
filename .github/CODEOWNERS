@@ -1,0 +1,16 @@
+# CODEOWNERS — route reviews to the right people
+#
+# Syntax: path  @owner
+# Replace placeholder owners with real GitHub handles.
+
+# CI and workflow changes require platform review
+/.github/workflows/    @platform-team
+
+# Infrastructure code requires platform review
+/src/ai_ready_repo/infrastructure/    @platform-team
+
+# ADRs require architecture review
+/docs/adr/    @architecture-team
+
+# Security-sensitive areas
+/src/ai_ready_repo/domain/    @domain-team

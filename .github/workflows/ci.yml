@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        run: pip install uv==0.5.24
+
+      - name: Install dependencies
+        run: uv pip install -e ".[dev]" --system
+
+      - name: Format check
+        run: make format-check
+
+      - name: Lint
+        run: make lint
+
+      - name: Type check
+        run: make typecheck
+
+      - name: Import boundaries
+        run: make import-check
+
+      - name: Unit tests
+        run: make test-unit
+
+      - name: Validate ADRs
+        run: make validate-adrs
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: htmlcov/

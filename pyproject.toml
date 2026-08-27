@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-ready-repo"
+version = "0.1.0"
+description = "AI-ready repository starter template"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.5",
+    "pytest-cov==6.1.0",
+    "ruff==0.9.10",
+    "mypy==1.15.0",
+    "import-linter==2.3",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "S",   # flake8-bandit (security)
+    "T20", # print statements
+]
+ignore = [
+    "S101", # assert in tests is fine
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "T20"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short -q"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.importlinter]
+root_packages = ["ai_ready_repo"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Domain must not import infrastructure"
+type = "forbidden"
+source_modules = ["ai_ready_repo.domain"]
+forbidden_modules = ["ai_ready_repo.infrastructure"]
+
+[[tool.importlinter.contracts]]
+name = "Domain must not import application"
+type = "forbidden"
+source_modules = ["ai_ready_repo.domain"]
+forbidden_modules = ["ai_ready_repo.application"]
