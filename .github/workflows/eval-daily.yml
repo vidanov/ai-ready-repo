@@ -21,7 +21,7 @@ jobs:
         run: pip install uv==0.5.24
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" pyyaml --system
+        run: uv pip install -e ".[dev]" --system
 
       - name: Run evaluations
         run: python scripts/run_evals.py

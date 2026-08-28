@@ -60,7 +60,7 @@ test: ## Run all tests
 
 .PHONY: test-unit
 test-unit: ## Run unit tests only (with coverage enforcement)
-	uv run pytest tests/unit -v --cov=src --cov-report=term-missing
+	uv run pytest tests/unit -v --cov=src --cov-report=term-missing --cov-report=html
 
 .PHONY: test-integration
 test-integration: ## Run integration tests only (requires services)

@@ -110,7 +110,7 @@ ADRs live in `docs/adr/`. Each one records a decision, its reasons, and a **Veri
 
 `make validate-adrs` checks that every ADR has the required fields. It runs in CI.
 
-Template: copy `docs/adr/ADR-DOMAIN-001-money-not-float.md` and adapt.
+Template: copy `docs/adr/ADR-DOMAIN-001-order-state-machine.md` and adapt.
 
 ---
 
@@ -140,7 +140,7 @@ The daily workflow `.github/workflows/eval-daily.yml` runs this automatically. T
 
 ## Adapting this template
 
-1. Replace the `Money` domain example with your actual domain model.
+1. Replace the `Order` domain example with your actual domain model.
 2. Update import contracts in `pyproject.toml` to match your module names.
 3. Replace placeholder owners in `.github/CODEOWNERS`.
 4. Add real tasks to `scripts/eval_tasks/` after your first agent session.
