@@ -313,6 +313,9 @@ For each significant constraint in your codebase, write one ADR:
 - What is the rule
 - Why it exists (the incident or reasoning that established it)
 - A `## Verification` section: a command to run or a pattern to search
+- A `## Retirement` section: the condition under which this rule should be
+  removed or reviewed. Without this, enforced rules accumulate and nobody
+  dares delete a gate that has never fired.
 
 Add ADR validation to CI:
 ```bash
@@ -329,7 +332,7 @@ verify: format-check lint typecheck test validate-adrs
 after agent sessions reveal what gets misunderstood.
 
 **Done condition:** `make validate-adrs` passes. Every ADR has a Verification
-section you could give to an agent as a check command.
+section and a Retirement section.
 
 ---
 
