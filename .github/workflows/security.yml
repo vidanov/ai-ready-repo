@@ -8,6 +8,7 @@ on:
 
 # Two jobs:
 # 1. dependency-review — flags new vulnerable or disallowed dependencies on PRs.
+#    Requires Dependency Graph enabled in repo settings.
 # 2. secret-scan       — runs gitleaks to detect hardcoded secrets in history and
 #                        new commits.
 
@@ -20,7 +21,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: moderate
@@ -29,7 +30,7 @@ jobs:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # full history so gitleaks can scan all commits
       - uses: gitleaks/gitleaks-action@v2
