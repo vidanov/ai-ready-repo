@@ -306,7 +306,7 @@ exist, and an agent can verify they are still in force.
 **Do it:**
 
 Create `docs/adr/`. Copy
-[ADR-DOMAIN-001-money-not-float.md](./docs/adr/ADR-DOMAIN-001-money-not-float.md)
+[ADR-DOMAIN-001-order-state-machine.md](./docs/adr/ADR-DOMAIN-001-order-state-machine.md)
 as a template.
 
 For each significant constraint in your codebase, write one ADR:

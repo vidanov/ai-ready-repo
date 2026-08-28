@@ -1,0 +1,12 @@
+description: >
+  Verify the Order domain model enforces valid state transitions.
+  The transition() method must reject invalid status changes and
+  the cancel() convenience method must work from pending and confirmed.
+
+verification: "make test-unit"
+expected_exit_code: 0
+
+hints:
+  - "Order status changes go through transition(), never direct assignment"
+  - "See ADR-DOMAIN-001 for the rationale"
+  - "Run: make verify to check everything"
