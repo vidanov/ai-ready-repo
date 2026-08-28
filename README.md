@@ -138,6 +138,39 @@ The daily workflow `.github/workflows/eval-daily.yml` runs this automatically. T
 
 ---
 
+## Verification drills and fixtures
+
+Every enforced rule needs a **firing condition**: proof that the gate can actually
+reject a violation, not just that it exists in the file. A gate that has never
+fired is indistinguishable from a gate that cannot fire.
+
+The repository includes two drills:
+
+| Drill | What it proves |
+|-------|----------------|
+| `make drill-transition-guard` | The `Order.transition()` guard rejects an invalid state change |
+| `make drill-import-check` | The import-linter boundary gate catches a forbidden import |
+
+Each drill plants a known violation, asserts the gate rejects it, and cleans up.
+Both are linked from their respective ADR's `## Firing condition` section.
+
+For tamper-resistant verification (prevents an agent from weakening the tests
+to make them pass):
+
+```bash
+make verify-tamperproof
+```
+
+This copies verification files to a temporary directory and runs checks from
+there, so an agent that modifies the Makefile or tests still fails.
+
+The full catalog of implemented fixtures, planned fixtures, and open fixture
+ideas is in [docs/FIXTURES.md](./docs/FIXTURES.md). Fixture contributions from
+outside the project are especially valuable — they test failure shapes the
+original author did not imagine.
+
+---
+
 ## Adapting this template
 
 1. Replace the `Order` domain example with your actual domain model.

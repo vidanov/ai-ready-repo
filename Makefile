@@ -131,6 +131,10 @@ drill-transition-guard: ## Prove the Order.transition() guard fires on an invali
 
 
 
+.PHONY: verify-tamperproof
+verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
+	@bash scripts/verify_tamperproof.sh
+
 .PHONY: eval
 eval: ## Run agent evaluation tasks against this repo
 	@python3 scripts/run_evals.py
