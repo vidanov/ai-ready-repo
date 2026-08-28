@@ -38,3 +38,15 @@ make test-unit
 
 Any new status change must go through `transition()`. A direct assignment
 outside the domain layer is a bug.
+
+## Retirement
+
+Remove this constraint if:
+
+- The `Order` entity is replaced by an event-sourced aggregate where status
+  is derived from the event log rather than stored as a field.
+- The domain model moves to a framework (e.g. Django FSM) that provides its
+  own transition enforcement, making the manual state machine redundant.
+
+Review if the transition table has not changed in 12 months — a static state
+machine may indicate the domain is stable enough to simplify.

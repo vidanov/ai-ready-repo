@@ -50,21 +50,20 @@ A PR without a Verification section will not be merged.
 
 These are confirmed gaps. Claim one by opening a PR that references the item number.
 
-### #001 — Add a `Money.subtract()` method
-**Gap:** `Money` has `add()` but no `subtract()`. Callers must negate manually.
+### #001 — Add `Order.deliver()` convenience method
+**Gap:** `Order` has `cancel()` as a convenience method but no `deliver()`. Callers must call `transition(OrderStatus.DELIVERED)` directly for the full happy path.
 **File:** `src/ai_ready_repo/domain/__init__.py`
-**Tests:** `tests/unit/test_domain_money.py` — add tests for the new method
-**Rules:** Subtracting to a negative result must raise `ValueError`. Currency mismatch must raise `ValueError`. Match the existing `add()` pattern.
+**Tests:** `tests/unit/test_domain_order.py` — add tests for the new method
+**Rules:** Must only work on a shipped order. Must follow the existing `cancel()` pattern. Must raise `ValueError` for invalid transitions.
 **Verify:** `make test-unit` passes, `make typecheck` passes
 
-### #002 — Add a `Money.multiply(factor: Decimal)` method
-**Gap:** Quantity × price calculations require a scalar multiply operation.
-**File:** `src/ai_ready_repo/domain/__init__.py`
-**Tests:** `tests/unit/test_domain_money.py`
-**Rules:** Factor must be positive. Result rounds to 2 decimal places using `ROUND_HALF_UP`. Currency is preserved.
-**Verify:** `make test-unit` passes, `make typecheck` passes
+### #002 — Add `Order.reopen()` method with ADR
+**Gap:** There is no way to reopen a cancelled order. Whether this should be allowed is a design decision. Add the method if only pending/confirmed orders were cancelled (not shipped), and write an ADR documenting the rule.
+**File:** `src/ai_ready_repo/domain/__init__.py`, `docs/adr/ADR-DOMAIN-002-cancel-reopen-rules.md`
+**Rules:** Reopened orders return to `PENDING`. Only `CANCELLED` orders can be reopened. A cancelled order that was previously shipped cannot be reopened (add a `was_shipped` flag or track history). ADR must have a `## Verification` section.
+**Verify:** `make verify` passes, `make validate-adrs` passes with all ADRs valid
 
-### #003 — Add a second ADR
+### #003 — Add a second ADR for the three-layer architecture
 **Gap:** Only one ADR exists. The import boundary contract (domain/application/infrastructure) is enforced by import-linter but has no ADR explaining why the layering exists.
 **File:** `docs/adr/ADR-ARCH-001-three-layer-architecture.md`
 **Rules:** Must follow the ADR template. Must have a `## Verification` section with the exact command to check the contract is in force.
@@ -76,40 +75,22 @@ These are confirmed gaps. Claim one by opening a PR that references the item num
 **Content:** A `tmp_path_factory`-based fixture for a temporary SQLite database. Add a placeholder integration test that uses it.
 **Verify:** `make test` passes
 
-### #005 — Add a `make lint-changed` target
-**Gap:** `make verify` runs lint on all files. Agents working on a single file pay the full cost. A `lint-changed` target should lint only files changed since the last commit.
-**File:** `Makefile`
-**Implementation:** `git diff --name-only HEAD | grep '\.py$' | xargs ruff check`
-**Verify:** Running `make lint-changed` after touching one file only lints that file. `make verify` still lints everything.
-
-### #006 — Write a real eval task for item #001
-**Gap:** The example eval task (`scripts/eval_tasks/add-subtract-method.yaml`) describes adding `subtract()` but the method does not exist yet. After #001 is merged, this task needs to be updated so the verification command tests the actual implementation.
-**Depends on:** #001
-**File:** `scripts/eval_tasks/add-subtract-method.yaml`
+### #005 — Write an eval task that matches the current domain
+**Gap:** The existing eval task (`scripts/eval_tasks/add-subtract-method.yaml`) references `test_domain_money.py` which no longer exists. Replace it with a task that tests against the current `Order` domain.
+**File:** `scripts/eval_tasks/add-deliver-method.yaml` (delete the old one)
 **Verify:** `python scripts/run_evals.py` reports 1/1 passed
 
-### #007 — Add a `pre-commit` config
+### #006 — Add a `pre-commit` config
 **Gap:** No pre-commit hooks. Format and lint run in CI but not locally on commit. Add a `.pre-commit-config.yaml` that runs `ruff format` and `ruff check` on staged files.
 **File:** `.pre-commit-config.yaml`
 **Rules:** Must use pinned hook versions. Must not run tests (too slow for a commit hook). Add install instructions to `ADOPT.md`.
 **Verify:** `pre-commit run --all-files` passes
 
-### #008 — Add a `LEARNINGS.md` with patterns from the first contributions
-**Gap:** Contributors (human and agent) discover things while working in this repo. Those learnings should be captured so the next contributor starts with them.
-**File:** `LEARNINGS.md`
-**Format:**
-```markdown
-# Learnings
-
-## What we found while building this
-
-### [Pattern name]
-**Observation:** [what happened]
-**Why it matters:** [consequence]
-**What we did:** [fix or pattern adopted]
-```
-**Content:** Seed with at least two observations from building the initial scaffold.
-**Verify:** `make validate-adrs` still passes (the script should not touch LEARNINGS.md)
+### #007 — Add a placeholder integration test
+**Gap:** `tests/integration/` exists but contains only `__init__.py`. The template claims an integration test layer but does not demonstrate one. Add a minimal test that exercises the application layer with the `InMemoryOrderRepository`.
+**File:** `tests/integration/test_order_workflow.py`
+**Rules:** Test the full place → confirm → ship → deliver workflow through the application and infrastructure layers together.
+**Verify:** `make test-integration` passes
 
 ---
 
