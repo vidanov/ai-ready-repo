@@ -39,6 +39,24 @@ make test-unit
 Any new status change must go through `transition()`. A direct assignment
 outside the domain layer is a bug.
 
+## Firing condition
+
+A guard that has never rejected a real call cannot be distinguished from a guard
+that is unreachable. Run the drill to prove `transition()` can convict:
+
+```
+make drill-transition-guard
+```
+
+This executes an invalid transition attempt against a live `Order` instance and
+asserts that `ValueError` is raised. A passing drill means the guard is on the
+executed path, not just in the file.
+
+Review the ADR retirement conditions if:
+
+- The drill ran and no exception was raised (guard is unreachable or bypassed).
+- The drill has not been run in 6 months (staleness signal).
+
 ## Retirement
 
 Remove this constraint if:

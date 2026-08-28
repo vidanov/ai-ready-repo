@@ -14,3 +14,4 @@
 
 # Security-sensitive areas
 /src/ai_ready_repo/domain/    @domain-team
+/SECURITY.md                  @platform-team
