@@ -155,15 +155,19 @@ def audit(root: Path) -> None:
         (root / ".importlinter").exists(),
         "uv pip install import-linter && add contracts to pyproject.toml — see ADOPT.md Step 6")
 
-    add("L3", "AGENTS.md present",
-        (root / "AGENTS.md").exists() or
-        (root / "CLAUDE.md").exists(),
+    agent_file = next(
+        (root / name for name in ("AGENTS.md", "CLAUDE.md") if (root / name).exists()),
+        None,
+    )
+
+    add("L3", "Agent instruction file present (AGENTS.md or CLAUDE.md)",
+        agent_file is not None,
         "Create AGENTS.md — copy template from ai-ready-repo")
 
-    add("L3", "AGENTS.md is minimal (<100 lines)",
-        len((root / "AGENTS.md").read_text().splitlines()) < 100
-        if (root / "AGENTS.md").exists() else False,
-        "Trim AGENTS.md — remove rules the tools already enforce")
+    add("L3", "Agent instruction file is minimal (<100 lines)",
+        len(agent_file.read_text().splitlines()) < 100
+        if agent_file is not None else False,
+        "Trim instruction file — remove rules the tools already enforce")
 
     add("L3", "ADRs present with Verification sections",
         any(

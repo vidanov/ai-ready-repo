@@ -17,7 +17,7 @@ bootstrap: ## Set up a fresh development environment from scratch
 check-env: ## Verify the environment is correctly set up
 	@echo "→ Python: $$(python --version)"
 	@echo "→ uv: $$(uv --version)"
-	@python -c "import ai_ready_repo; print('→ Package importable: ok')"
+	@python3 -c "import ai_ready_repo; print('→ Package importable: ok')"
 	@echo "→ Environment check passed"
 
 # ── Formatting ───────────────────────────────────────────────────────────────
@@ -90,17 +90,17 @@ verify-fast: format-check lint typecheck ## Fast verification (no tests)
 
 .PHONY: validate-adrs
 validate-adrs: ## Validate ADR format and required fields
-	@python scripts/validate_adrs.py
+	@python3 scripts/validate_adrs.py
 
 # ── AI-readiness audit ───────────────────────────────────────────────────────
 
 .PHONY: audit
 audit: ## Run AI-readiness audit on this repository
-	@python scripts/ai_readiness_audit.py .
+	@python3 scripts/ai_readiness_audit.py .
 
 .PHONY: audit-repo
 audit-repo: ## Run AI-readiness audit on another repo (usage: make audit-repo REPO=/path/to/repo)
-	@python scripts/ai_readiness_audit.py $(REPO)
+	@python3 scripts/ai_readiness_audit.py $(REPO)
 
 # ── Lint changed files only ──────────────────────────────────────────────────
 
@@ -112,7 +112,7 @@ lint-changed: ## Lint only files changed since last commit
 
 .PHONY: eval
 eval: ## Run agent evaluation tasks against this repo
-	@python scripts/run_evals.py
+	@python3 scripts/run_evals.py
 
 # ── Utilities ────────────────────────────────────────────────────────────────
 
