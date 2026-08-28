@@ -47,6 +47,44 @@ failed") rather than as an unnamed sub-failure inside "Verify."
 it being part of `make verify`. Both run, which is slightly redundant but makes
 failures easy to identify.
 
+### Coverage thresholds must be wired into the verify target
+
+**Observation:** `fail_under = 80` was configured in `pyproject.toml` under
+`[tool.coverage.report]`, but `make test-unit` ran pytest without `--cov`.
+The threshold was decoration — coverage was 63% and no one noticed.
+
+**Why it matters:** A configured-but-unenforced rule is worse than no rule. It
+creates false confidence. An agent or human checks "coverage threshold: yes" and
+moves on.
+
+**What we did:** Added `--cov=src --cov-report=term-missing --cov-report=html`
+to the `test-unit` target. The threshold now fails the build.
+
+### Audit checks must use the same logic for related items
+
+**Observation:** The AI-readiness audit accepted both `AGENTS.md` and `CLAUDE.md`
+for the presence check, but hardcoded only `AGENTS.md` for the line-count check.
+A Claude-only repo passed presence and failed line-count with no way to fix it.
+
+**Why it matters:** When two checks reference the same concept (instruction file),
+they must resolve the file once and share the result. Split logic drifts.
+
+**What we did:** Resolved the instruction file once with `next()` and used it for
+both checks.
+
+### CONTRIBUTING.md open items must match the actual domain model
+
+**Observation:** After refactoring the domain from `Money` to `Order`, eight
+contribution items still referenced `Money.subtract()`, `Money.multiply()`, and
+`test_domain_money.py`. The eval task pointed at a test file that no longer existed.
+
+**Why it matters:** Stale contribution items are the worst kind of template drift.
+A contributor (especially an agent) follows the instructions precisely and hits a
+wall immediately. Trust in the repository drops.
+
+**What we did:** Rewrote all open items to reference the `Order` domain. Replaced
+the eval task with one that tests against the current codebase.
+
 ---
 
 *Add your observations here. Format: observation → why it matters → what we did.*

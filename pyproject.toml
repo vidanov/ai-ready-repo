@@ -16,6 +16,7 @@ dev = [
     "ruff==0.9.10",
     "mypy==1.15.0",
     "import-linter==2.3",
+    "pyyaml==6.0.2",
 ]
 
 [tool.ruff]
@@ -64,12 +65,14 @@ show_missing = true
 root_packages = ["ai_ready_repo"]
 include_external_packages = true
 
+# adr: ADR-ARCH-001
 [[tool.importlinter.contracts]]
 name = "Domain must not import infrastructure"
 type = "forbidden"
 source_modules = ["ai_ready_repo.domain"]
 forbidden_modules = ["ai_ready_repo.infrastructure"]
 
+# adr: ADR-ARCH-001
 [[tool.importlinter.contracts]]
 name = "Domain must not import application"
 type = "forbidden"

@@ -11,7 +11,7 @@ It is intentionally short. If a rule can be enforced by a tool, it is not here.
 | Full verification (same as CI) | `make verify` |
 | Fast check (no tests) | `make verify-fast` |
 | Unit tests only | `make test-unit` |
-| Single test | `pytest tests/unit/test_domain_money.py -k test_name` |
+| Single test | `pytest tests/unit/test_domain_order.py -k test_name` |
 | Format | `make format` |
 | Lint + fix | `make lint-fix` |
 | Type check | `make typecheck` |
@@ -26,7 +26,7 @@ Three layers. Import direction is one-way downward:
 infrastructure  →  application  →  domain
 ```
 
-- `domain` — pure business logic, no external imports. `Money` lives here.
+- `domain` — pure business logic, no external imports. `Order` lives here.
 - `application` — use cases that orchestrate domain objects.
 - `infrastructure` — databases, APIs, external services.
 
@@ -49,5 +49,5 @@ Before claiming a task is complete:
 
 ## Non-obvious constraints
 
-`Money` uses `Decimal`, not `float`. See ADR-DOMAIN-001.
-This is intentional — do not simplify it to float or int.
+`Order` status changes must go through `transition()`, never direct assignment. See ADR-DOMAIN-001.
+This is intentional — do not bypass the state machine.
