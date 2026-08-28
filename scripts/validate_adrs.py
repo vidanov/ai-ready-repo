@@ -63,6 +63,13 @@ for path in adr_files:
             "(add a command or search pattern that proves compliance)"
         )
 
+    # Check that retirement section exists
+    if "## Retirement" not in content and "## retirement" not in content.lower():
+        errors.append(
+            f"{path.name}: missing '## Retirement' section "
+            "(state when this rule should be removed or reviewed)"
+        )
+
 if errors:
     print(f"ADR validation failed ({len(errors)} error(s)):\n")
     for e in errors:

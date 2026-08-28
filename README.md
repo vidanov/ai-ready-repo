@@ -106,7 +106,7 @@ make import-check
 
 ## Architecture Decision Records
 
-ADRs live in `docs/adr/`. Each one records a decision, its reasons, and a **Verification** section — a command an agent can run to confirm the constraint is still in force.
+ADRs live in `docs/adr/`. Each one records a decision, its reasons, a **Verification** section (a command to confirm the constraint is still in force), and a **Retirement** section (the condition under which the rule should be removed or reviewed).
 
 `make validate-adrs` checks that every ADR has the required fields. It runs in CI.
 

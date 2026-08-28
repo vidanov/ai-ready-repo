@@ -48,3 +48,15 @@ grep -A5 "importlinter.contracts" pyproject.toml
 
 Both contracts must report `KEPT`. A `BROKEN` result means a layer imported
 something it should not have.
+
+## Retirement
+
+Remove this constraint if:
+
+- The codebase moves to a different module structure (e.g. feature-sliced
+  vertical modules) where cross-cutting imports are the intended pattern.
+- The project shrinks to a single module where layering adds ceremony without
+  protecting anything.
+
+Review if `make import-check` has never caught a real violation in 6 months —
+a gate that never fires may be enforcing a boundary nobody is tempted to cross.
