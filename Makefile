@@ -108,7 +108,28 @@ audit-repo: ## Run AI-readiness audit on another repo (usage: make audit-repo RE
 lint-changed: ## Lint only files changed since last commit
 	@git diff --name-only HEAD | grep '\.py$$' | xargs --no-run-if-empty uv run ruff check
 
-# ── Evals ────────────────────────────────────────────────────────────────────
+# ── Drills — prove gates can convict ─────────────────────────────────────────
+
+.PHONY: drill-import-check
+drill-import-check: ## Prove the import boundary gate fires on a real violation
+	@echo "→ Planting a known forbidden import (infrastructure → domain bypass via application)..."
+	@echo "from ai_ready_repo.infrastructure import InMemoryOrderRepository" >> src/ai_ready_repo/domain/__init__.py
+	@echo "→ Running import-check (must exit nonzero)..."
+	@if uv run lint-imports > /dev/null 2>&1; then \
+		git checkout src/ai_ready_repo/domain/__init__.py; \
+		echo "✗ drill-import-check FAILED: gate did not fire — check is miswired"; \
+		exit 1; \
+	else \
+		git checkout src/ai_ready_repo/domain/__init__.py; \
+		echo "✓ drill-import-check passed: gate correctly rejected the violation"; \
+	fi
+
+.PHONY: drill-transition-guard
+drill-transition-guard: ## Prove the Order.transition() guard fires on an invalid transition
+	@echo "→ Attempting invalid transition (pending → shipped)..."
+	@uv run python3 scripts/drill_transition_guard.py
+
+
 
 .PHONY: eval
 eval: ## Run agent evaluation tasks against this repo
