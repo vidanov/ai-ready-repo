@@ -226,6 +226,32 @@ and pattern mapping table are in [docs/ECOSYSTEMS.md](./docs/ECOSYSTEMS.md).
 
 ## Adapting this template
 
+### Tool bridges
+
+AGENTS.md is the single source of truth. Most tools read it natively (Codex,
+Kiro, Amp, opencode, Jules, Devin, goose, Warp, RooCode, Kilo Code, Zed).
+For tools that expect their own config file, generate bridge files:
+
+```bash
+make setup-tools
+```
+
+This creates:
+
+| File | Tool |
+|------|------|
+| `CLAUDE.md` | Claude Code (uses `@AGENTS.md` import) |
+| `.cursorrules` | Cursor |
+| `.windsurfrules` | Windsurf |
+| `.github/copilot-instructions.md` | GitHub Copilot |
+| `.aider.conf.yml` | Aider |
+| `.gemini/settings.json` | Gemini CLI |
+
+Bridges point back to AGENTS.md. Edit AGENTS.md, not the bridges.
+To remove all bridges: `bash scripts/setup_tool_bridges.sh --clean`
+
+### Replace the example domain
+
 1. Replace the `Order` domain example with your actual domain model.
 2. Update import contracts in `pyproject.toml` to match your module names.
 3. Replace placeholder owners in `.github/CODEOWNERS`.
