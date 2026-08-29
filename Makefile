@@ -136,6 +136,23 @@ drill-import-check: ## Prove the import boundary gate fires on a real violation
 	fi; \
 	echo "✓ drill-import-check passed: gate rejected the violation and named the forbidden edge"
 
+.PHONY: drill-import-permit
+drill-import-permit: ## Prove the import boundary gate permits a legal cross-layer import
+	@echo "→ Planting a legal import (application → domain, which the contract permits)..."
+	@echo "from ai_ready_repo.domain import Order" >> src/ai_ready_repo/application/__init__.py
+	@echo "→ Running import-check (must exit zero — this import is allowed)..."
+	@trap 'git checkout src/ai_ready_repo/application/__init__.py 2>/dev/null' EXIT; \
+	OUTPUT=$$(uv run lint-imports 2>&1); \
+	RC=$$?; \
+	if [ $$RC -ne 0 ]; then \
+		echo "✗ drill-import-permit FAILED: gate rejected a legal import"; \
+		echo "  A linter that rejects valid imports is as broken as one that misses violations."; \
+		echo "  Output was:"; \
+		echo "$$OUTPUT" | head -5; \
+		exit 1; \
+	fi; \
+	echo "✓ drill-import-permit passed: gate permitted the legal cross-layer import"
+
 .PHONY: drill-transition-guard
 drill-transition-guard: ## Prove the Order.transition() guard fires on an invalid transition
 	@echo "→ Attempting invalid transition (pending → shipped)..."
