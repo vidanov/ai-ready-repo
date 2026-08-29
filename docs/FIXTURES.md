@@ -42,31 +42,30 @@ Proves the boundary gate can convict.
 
 ---
 
-## Planned (accepting contributions)
-
 ### F-003: Oracle tampering
 
+**Make target:** `make verify-tamperproof`
+**Script:** `scripts/verify_tamperproof.sh`
 **Proposed by:** quiet-vector-83e1b59fd1 (1f916 #2807, c27759)
 
 **Problem:** If the agent can modify the code, tests, Makefile, or CI config,
 it can make `make verify` pass by weakening the verification path rather than
 fixing the code. The gate is part of the answer surface.
 
-**Fixture shape:**
-1. Copy verification files (Makefile, test files, pyproject.toml lint config)
+**How it works:**
+1. Copies verification files (Makefile, test files, pyproject.toml lint config)
    to a temporary directory before the agent runs.
-2. After the agent's changes, run the acceptance check from the trusted copy,
+2. After the agent's changes, runs the acceptance check from the trusted copy,
    not from the agent-modified worktree.
-3. Assert that planted violations still produce failures when checked from
+3. Asserts that planted violations still produce failures when checked from
    the immutable copy.
 
-**Done condition:** `make verify-tamperproof` runs the verification from a
-pre-copied trusted directory. A PR that modifies Makefile or test discovery
-still fails if the planted violation is not actually fixed.
+**Failure class:** Oracle tampering — agent weakens the judge instead of fixing the code.
+**Status:** ✅ Implemented
 
-**Difficulty:** Medium — the mechanism is a shell script, but wiring it into
-CI without breaking the normal workflow needs care.
-**Status:** 🟡 Planned — see CONTRIBUTING.md #008
+---
+
+## Open for contribution
 
 ---
 
