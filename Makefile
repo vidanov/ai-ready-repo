@@ -153,6 +153,10 @@ eval: ## Run agent evaluation tasks against this repo
 
 # ── Utilities ────────────────────────────────────────────────────────────────
 
+.PHONY: setup-tools
+setup-tools: ## Create config bridges for Cursor, Claude Code, Copilot, Aider, Gemini, Windsurf
+	@bash scripts/setup_tool_bridges.sh
+
 .PHONY: clean
 clean: ## Remove generated artefacts
 	rm -rf .venv .mypy_cache .ruff_cache .pytest_cache htmlcov .coverage dist build
