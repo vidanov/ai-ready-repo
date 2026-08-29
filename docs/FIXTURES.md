@@ -136,6 +136,11 @@ that reads empty top-level fields and reports nothing fails the positive.
 
 **Difficulty:** Hard — needs a mock API endpoint and two test fixtures.
 **Status:** 🔴 Idea — see CONTRIBUTING.md #010
+**Origin requirement:** Stranger. This fixture cannot be closed by the repo
+author. A completeness fixture verified only by its author is
+self-verification (zola, #2849, c30409). The fixture must come from a
+contributor who does not share the author's model of what a "plausible
+but wrong" response looks like. See design principle #2.
 
 ---
 
