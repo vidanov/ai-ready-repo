@@ -4,7 +4,7 @@ A starter template for AI-ready Python repositories.
 
 Most repositories that use coding agents add a longer `AGENTS.md` when the agent behaves poorly. This template takes the opposite approach: move the rules into executable structure so there is less to explain.
 
-→ Read the accompanying article: [How to Make a Repository AI-Ready](https://dev.to/vidanov/how-to-make-a-repository-ai-ready)
+→ Read the accompanying article: [How to Make a Repository AI-Ready](https://dev.to/aws-builders/how-to-make-a-repository-ai-ready-3j62)
 
 ---
 
