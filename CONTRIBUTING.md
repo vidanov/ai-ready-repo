@@ -209,6 +209,58 @@ See [docs/FIXTURES.md](./docs/FIXTURES.md) for the full catalog with design rati
 **Verify:** Agent does not take the production-harmful action in ambiguous context.
 **Origin:** Anthropic cybersecurity eval incidents (July 2026) — model published a real package to a real registry because it reasoned the situation was a simulation.
 
+### Verification and process gaps (found during a self-audit, 2026-08-30)
+
+The repo scores itself 20/20, but the score measures the example domain
+(49 statements in `src/`) — not the 2000+ lines in `scripts/` that are the
+actual deliverable, and not whether the drills/fixtures in `docs/FIXTURES.md`
+ever run anywhere. These items close that gap.
+
+### #022 — Run drills and fixtures in CI
+**Gap:** `drill_ci_coverage.py` classifies every `drill-*` target and `verify-tamperproof` as warn-only, not gating. Zero of them run in any GitHub Actions workflow. Everything in `docs/FIXTURES.md` is proven locally-only and can silently rot (it already had — see `verify_tamperproof.sh`, fixed 2026-08-30, which had been broken since it was written).
+**File:** `.github/workflows/ci.yml` (new job) or a new `.github/workflows/drills.yml`
+**Rules:** Non-gating is acceptable (`continue-on-error: true`), but the job must run on every PR so a break is visible, not silent.
+**Verify:** `drill-ci-coverage`'s `DRILL_TARGETS` set all appear in a workflow file; PR checks show a drills job.
+
+### #023 — Lint, typecheck, and test `scripts/`
+**Gap:** `make lint`/`make typecheck`/coverage all scope to `src tests` only. `scripts/` (the actual product: `adopt.py`, `ai_readiness_audit.py`, `run_evals.py`, the drills) gets zero ruff, zero mypy, zero tests. The 100% coverage badge measures the toy `Order` domain, not the tool.
+**File:** `Makefile` (`lint`, `typecheck` targets), `tests/unit/test_adopt.py`, `test_ai_readiness_audit.py`, `test_validate_adrs.py` (new)
+**Rules:** Extending lint/typecheck scope will surface pre-existing issues (confirmed: `scripts/adopt.py` currently fails `ruff format --check` and has 47 lint findings, 2 mypy `type-arg` errors) — fix those as part of this item, not by excluding the path.
+**Verify:** `make verify` covers `scripts/` and passes.
+
+### #024 — Stop duplicating checks in CI
+**Gap:** [.github/workflows/ci.yml](.github/workflows/ci.yml) runs `make verify` (format-check, lint, typecheck, import-check, test-unit, validate-adrs), then immediately re-runs each of those six as separate steps. Same checks, twice, no extra signal, double the CI time.
+**File:** `.github/workflows/ci.yml`
+**Rules:** Keep either the single `make verify` step or the six individual steps (individual steps give clearer failure attribution in the GitHub UI) — not both.
+**Verify:** CI run time roughly halves; same pass/fail outcome.
+
+### #025 — Pin the reusable audit action to a version, not `main`
+**Gap:** [.github/actions/ai-readiness-audit/action.yml](.github/actions/ai-readiness-audit/action.yml) curls `ai_readiness_audit.py` from `main` at runtime. A consumer who pins the action to a commit SHA still executes whatever is on `main` at the time the action runs — the pin is decorative.
+**File:** `.github/actions/ai-readiness-audit/action.yml`
+**Rules:** Vendor the script into the action directory (copy, not curl) so pinning the action actually pins the script.
+**Verify:** Action runs with no network fetch; behavior identical between two different SHA pins of a repo whose `main` audit script changed in between.
+
+### #026 — Give the ecosystem scaffolds working CI
+**Gap:** `ecosystems/cdk-typescript/` and `ecosystems/terraform/` are advertised in the README table as scaffolds, but nothing builds them — no workflow runs `make bootstrap && make verify` in either directory. See also #021 (CDK TypeScript) and #014 (Terraform), which cover making the scaffolds themselves pass; this item covers keeping them passing.
+**File:** `.github/workflows/ci.yml` (new matrix job) or per-ecosystem workflow
+**Verify:** CI fails if either ecosystem's `make verify` breaks.
+
+### #027 — Cut a `v0.1.0` tag and start a changelog
+**Gap:** [ADR-PROC-001](docs/adr/ADR-PROC-001-changelog-at-releases.md) mandates a changelog at tagged releases. Zero tags exist in the repo. This also blocks #025 — action pinning to `@v1` needs a `v1` tag to exist.
+**File:** `CHANGELOG.md` (new), git tag
+**Verify:** `git tag` lists `v0.1.0`; `CHANGELOG.md` has an entry for it.
+
+### #028 — Split the product from the example
+**Gap:** `src/ai_ready_repo/` (the `Order` domain) is a teaching fixture for the import-boundary and ADR patterns. `scripts/` is the actual deliverable (the audit tool, the adopt tool, the eval runner). Keeping both under one `src/` makes the coverage badge and import-boundary story read as if they cover the product, when they cover the fixture.
+**Approach:** Move the `Order` example to `examples/` (or keep it in `src/` but rename the package to make its role explicit, e.g. `example_domain`), and make `scripts/` the thing `make verify` actually gates per #023.
+**Rules:** This is a structural change — needs its own ADR recording why the split happened and what still points at the old paths (README, AGENTS.md, `.cursor/rules/`, ADRs).
+**Verify:** `make verify` passes after the move; no stale path references remain (`grep -r "src/ai_ready_repo" docs/ README.md AGENTS.md`).
+
+### #029 — Advance the MISSION.md milestone
+**Gap:** [docs/MISSION.md](docs/MISSION.md) lists "Challenge post for real-world problem" as 🟡 Next and "First real-world contribution" as ⬜ Open. Nothing in the current repo blocks writing that post — it's a decision, not an engineering gap.
+**Approach:** Pick one candidate from MISSION.md's list (efficient local models / verification harnesses for critical domains / developer tooling), write the challenge post with a concrete acceptance test, post it where agents can find it (1f916.ai per the existing pattern), link it from MISSION.md.
+**Verify:** MISSION.md's status table shows the milestone moved from 🟡 to ✅ or names a specific blocker.
+
 ---
 
 ## Reporting a new gap
