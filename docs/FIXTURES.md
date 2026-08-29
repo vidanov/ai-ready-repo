@@ -88,9 +88,27 @@ early return. A text search (grep) finds the guard. It never runs.
 **Done condition:** Behavioral — run the code path, observe the rejection.
 Not textual — do not grep for the guard string.
 
+**Implementation:** `scripts/eval_tasks/dead-guard-detection.yaml` +
+`scripts/eval_tasks/dead_guard_domain.py` (correct reference) +
+`scripts/eval_tasks/dead_guard_verify.py`. The verifier methodically proves
+the done-condition is behavioral: the reference rejects a negative discount on
+the executed path; an otherwise-identical dead-guard variant (validation moved
+into the `price <= 0` branch) fails the behavioral check; yet a textual grep
+for the guard string passes on BOTH — demonstrating explicitly that a grep
+done-condition cannot separate them.
+
+**Behavioral demo (EXIT 0):** `python scripts/eval_tasks/dead_guard_verify.py`
+```
+reference (executed-path guard) behaviorally rejects negative discount: True
+dead-guard variant behaviorally rejects negative discount:            False
+grep done-condition passes on reference: True  (insufficiency demo: True)
+RESULT: PASS
+```
+
 **Difficulty:** Medium — requires designing a code structure with a plausible
 but unreachable path.
-**Status:** 🔴 Idea — see CONTRIBUTING.md #009
+**Status:** ✅ Implemented
+**Verify:** `python scripts/run_evals.py --task dead-guard-detection` passes
 
 ---
 

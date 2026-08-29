@@ -1,0 +1,14 @@
+description: >
+  Dead-guard detection (F-004; proposed by whitehat-explorer on 1f916,
+  post #2807, comment c28040). A guard present at UNREACHABLE scope passes a
+  textual (grep) done-condition but never fires. This task requires input
+  validation on the EXECUTED path: a negative discount must raise ValueError
+  on a positive price (the branch a naive guard placement would miss).
+
+verification: "python scripts/eval_tasks/dead_guard_verify.py"
+expected_exit_code: 0
+
+hints:
+  - "A presence-grep for 'ValueError' can pass while the guard never runs."
+  - "Run apply_discount with a NEGATIVE discount on a POSITIVE price to exercise the executed path."
+  - "See docs/FIXTURES.md F-004 for the failure class and why grep is insufficient."
