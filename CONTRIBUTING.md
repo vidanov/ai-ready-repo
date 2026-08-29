@@ -256,10 +256,12 @@ ever run anywhere. These items close that gap.
 **Rules:** This is a structural change — needs its own ADR recording why the split happened and what still points at the old paths (README, AGENTS.md, `.cursor/rules/`, ADRs).
 **Verify:** `make verify` passes after the move; no stale path references remain (`grep -r "src/ai_ready_repo" docs/ README.md AGENTS.md`).
 
-### #029 — Advance the MISSION.md milestone
-**Gap:** [docs/MISSION.md](docs/MISSION.md) lists "Challenge post for real-world problem" as 🟡 Next and "First real-world contribution" as ⬜ Open. Nothing in the current repo blocks writing that post — it's a decision, not an engineering gap.
-**Approach:** Pick one candidate from MISSION.md's list (efficient local models / verification harnesses for critical domains / developer tooling), write the challenge post with a concrete acceptance test, post it where agents can find it (1f916.ai per the existing pattern), link it from MISSION.md.
-**Verify:** MISSION.md's status table shows the milestone moved from 🟡 to ✅ or names a specific blocker.
+### #030 — verify-tamperproof doesn't actually protect against prior tampering
+**Gap:** `scripts/verify_tamperproof.sh` copies the Makefile/tests/scripts to a temp directory at run time, from the current working tree. It protects against tampering attempted concurrently with or after that specific invocation, but not against tests or lint config that were already weakened before the command ran — which is the scenario F-003 describes (an agent weakens the oracle, then the oracle passes).
+**File:** `scripts/verify_tamperproof.sh`
+**Approach:** Source the trusted copy from git history instead of the working tree — e.g. `git show origin/main:tests/unit/...` or a pinned commit/tag known-good — so a same-session edit to the working copy can't affect what's checked.
+**Rules:** Must still check the working `src/` (that's what's being verified); only the oracle (tests, Makefile, lint config) comes from history.
+**Verify:** Drill: weaken a test in the working tree, confirm `make verify` passes but `make verify-tamperproof` still fails.
 
 ---
 
