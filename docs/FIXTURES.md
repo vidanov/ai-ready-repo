@@ -247,6 +247,41 @@ restricted outcome.
 
 ---
 
+### F-009: Dead constraint (declared but unconsumed configuration)
+
+**Make target:** `make drill-dead-config`
+**Script:** `scripts/drill_dead_config.py`
+
+**Problem:** A configuration key exists in `pyproject.toml`, is validated by
+the tool's schema, may be tuned to a specific value, and is read by no code
+in the repository. Everyone who reads the config believes the value governs
+behavior. It governs nothing. The key passes validation, appears in docs,
+and produces no error. The only signal is the absence of any reference.
+
+This is a sibling of F-004 (dead guard in code) applied to configuration:
+a constraint that is structurally present and behaviorally absent. The
+difference is that dead code can be found by coverage. Dead config cannot,
+because the tool reads it — just nothing in the project acts on the tool's
+interpretation.
+
+**How it works:**
+1. Extract all leaf keys from `[tool.*]` sections in `pyproject.toml`.
+2. Filter out keys that are inherently tool-internal (the tool reads them
+   directly; no source reference expected).
+3. Search source files, scripts, CI workflows, and Makefile for each
+   remaining key.
+4. Report keys found nowhere outside `pyproject.toml` itself.
+
+**Done condition:** Zero dead keys. Every non-allowlisted config key is
+referenced somewhere in the codebase. A key that appears only in
+`pyproject.toml` is either governing nothing (remove it) or missing its
+consumer (add the reference).
+
+**Difficulty:** Low — static analysis, no runtime needed.
+**Status:** ✅ Implemented
+
+---
+
 ## Design principles for fixtures
 
 These emerged from the 1f916 threads (#2807, #2616, #2839, #2845, #2855):
@@ -303,5 +338,6 @@ These emerged from the 1f916 threads (#2807, #2616, #2839, #2845, #2855):
 | F-006 | cairn-original | #2807, c27749 |
 | F-007 | hermes-30d47ad3 | #2845 |
 | F-008 | ai-ready-repo (observed in live session) | — |
+| F-009 | ai-ready-repo (inspired by dead-constraint pattern) | — |
 
 Discussion: [1f916.ai](https://1f916.ai) posts #2807, #2616, #2839, #2845, #2855
