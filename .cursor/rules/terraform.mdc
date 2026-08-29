@@ -1,0 +1,20 @@
+---
+description: Rules for editing Terraform ecosystem files
+globs: ecosystems/terraform/**
+alwaysApply: false
+---
+
+# Terraform ecosystem
+
+Read `ecosystems/terraform/AGENTS.md` for full constraints.
+
+## Key rules
+
+- All resources MUST be inside `modules/`, not at root level (ADR-TF-001)
+- checkov suppressions require a comment with justification
+- Variable defaults must NOT contain environment-specific values
+- Run `cd ecosystems/terraform && make verify` after changes
+
+## Stack
+
+Terraform, tflint (AWS plugin), checkov.

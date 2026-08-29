@@ -39,6 +39,9 @@ Most repositories that use coding agents add a longer `AGENTS.md` when the agent
 | **Security scanning** | `.github/workflows/security.yml` — dependency review + gitleaks |
 | **CODEOWNERS** | Routes CI, ADR, and infrastructure changes to reviewers |
 | **Multi-ecosystem** | CDK TypeScript, Terraform scaffolds + 10 more planned in `docs/ECOSYSTEMS.md` |
+| **AI discovery** | `llms.txt` — LLM-friendly project summary following the [llmstxt.org](https://llmstxt.org) standard |
+| **Per-path scoped rules** | `.cursor/rules/*.mdc` — path-scoped instructions for Cursor (Python, tests, CDK, Terraform, docs) |
+| **Reusable audit action** | `.github/actions/ai-readiness-audit/` — run the 20-item audit on any repo via GitHub Actions |
 | **AGENTS.md** | Minimal — only what cannot be inferred from running the tools |
 
 ---
@@ -112,8 +115,10 @@ ai-ready-repo/
 │   └── CODEOWNERS                   Routes reviews to the right people.
 │
 ├── Makefile                          Task interface: verify, drills, eval, audit.
+├── llms.txt                          AI discovery file (llmstxt.org standard).
 ├── AGENTS.md                         Agent guidance (minimal, non-redundant).
-├── CONTRIBUTING.md                   16 open items with acceptance tests.
+├── .cursor/rules/                    Per-path scoped rules for Cursor.
+├── CONTRIBUTING.md                   17 open items with acceptance tests.
 ├── ADOPT.md                          Step-by-step adoption guide for existing repos.
 └── LEARNINGS.md                      Patterns discovered while building.
 ```
@@ -257,6 +262,24 @@ To remove all bridges: `bash scripts/setup_tool_bridges.sh --clean`
 3. Replace placeholder owners in `.github/CODEOWNERS`.
 4. Add real tasks to `scripts/eval_tasks/` after your first agent session.
 5. Write an ADR for every constraint you want preserved.
+
+### Run the audit on your own repo
+
+Locally:
+
+```bash
+python3 scripts/ai_readiness_audit.py /path/to/your/repo
+```
+
+As a GitHub Action (in any repo):
+
+```yaml
+- uses: vidanov/ai-ready-repo/.github/actions/ai-readiness-audit@main
+  with:
+    fail-below: '10'  # optional: fail if score < 10
+```
+
+The action outputs `score` (0-20), `level` (0-4), and writes a summary to the job log.
 
 To upgrade an **existing repository**, follow the step-by-step guide in [ADOPT.md](./ADOPT.md).
 Run `make audit` first — it scores your current repository and tells you exactly what to do next.
