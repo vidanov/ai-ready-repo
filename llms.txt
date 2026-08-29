@@ -1,0 +1,39 @@
+# ai-ready-repo
+
+> A multi-ecosystem template for AI-ready repositories. Moves rules into executable structure so there is less to explain in instruction files. Verification-first: every rule has a firing condition that proves the gate works.
+
+The template provides pinned toolchains, one-command bootstrap, import boundary enforcement, ADR validation with firing and retirement conditions, verification drills, a fixture catalog, and agent evaluation tasks. The Python ecosystem is fully implemented. CDK TypeScript and Terraform are scaffolded with the same patterns.
+
+Key principle: every rule that can be enforced by a tool should be enforced by a tool. AGENTS.md documents only what the tools cannot check.
+
+## Docs
+
+- [README](https://github.com/vidanov/ai-ready-repo/blob/main/README.md): Project overview, quick start, features table, project structure
+- [AGENTS.md](https://github.com/vidanov/ai-ready-repo/blob/main/AGENTS.md): Agent guidance — commands, non-obvious constraints, completion evidence rules
+- [CONTRIBUTING.md](https://github.com/vidanov/ai-ready-repo/blob/main/CONTRIBUTING.md): 17 open contribution items, each with acceptance test and named origin
+- [ADOPT.md](https://github.com/vidanov/ai-ready-repo/blob/main/ADOPT.md): Step-by-step guide for adopting the pattern in existing repositories
+- [Ecosystems roadmap](https://github.com/vidanov/ai-ready-repo/blob/main/docs/ECOSYSTEMS.md): 12 ecosystems with pattern mapping table
+- [Mission](https://github.com/vidanov/ai-ready-repo/blob/main/docs/MISSION.md): Project vision, collaboration model, what we learned
+- [Fixture catalog](https://github.com/vidanov/ai-ready-repo/blob/main/docs/FIXTURES.md): 8 verification fixture types with attribution
+
+## Architecture
+
+- [ADR-ARCH-001: Three-layer architecture](https://github.com/vidanov/ai-ready-repo/blob/main/docs/adr/ADR-ARCH-001-three-layer-architecture.md): Domain/application/infrastructure boundaries enforced by import-linter
+- [ADR-DOMAIN-001: Order state machine](https://github.com/vidanov/ai-ready-repo/blob/main/docs/adr/ADR-DOMAIN-001-order-state-machine.md): State transitions as the domain example with drill
+
+## Ecosystems
+
+- [CDK TypeScript](https://github.com/vidanov/ai-ready-repo/tree/main/ecosystems/cdk-typescript): AWS CDK v2, jest, cdk-nag, ADR-CDK-001
+- [Terraform](https://github.com/vidanov/ai-ready-repo/tree/main/ecosystems/terraform): tflint, checkov, module boundary enforcement, ADR-TF-001
+
+## Scripts
+
+- [AI readiness audit](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/ai_readiness_audit.py): 20-item audit that scores any repository
+- [Tool bridges](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/setup_tool_bridges.sh): Generate config for Cursor, Claude Code, Copilot, Aider, Gemini, Windsurf
+- [ADR validator](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/validate_adrs.py): Checks ADR format in CI
+- [Eval runner](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/run_evals.py): Agent evaluation with baseline tracking
+
+## Optional
+
+- [Article: How to Make a Repository AI-Ready](https://dev.to/aws-builders/how-to-make-a-repository-ai-ready-3j62): Full article explaining the approach, 5-level maturity model, ratchet tables
+- [Learnings](https://github.com/vidanov/ai-ready-repo/blob/main/LEARNINGS.md): Patterns discovered while building with agents

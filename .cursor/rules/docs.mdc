@@ -1,0 +1,25 @@
+---
+description: Rules for editing documentation and ADRs
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Documentation and ADRs
+
+## ADR format (enforced by CI)
+
+Every ADR in `docs/adr/` must have:
+- Frontmatter: `id`, `status`, `scope`
+- A `## Verification` section with a command to prove the constraint
+- A `## Retirement` section with the condition to remove the rule
+
+Validate: `make validate-adrs`
+
+## Fixture catalog
+
+`docs/FIXTURES.md` tracks verification fixtures with attribution.
+When adding a fixture, include: ID, name, type, status, origin (who proposed it).
+
+## Ecosystem docs
+
+Each ecosystem has its own `docs/adr/` directory. ADRs there follow the same format.
