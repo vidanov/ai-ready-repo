@@ -69,13 +69,30 @@ a specific repo, specific acceptance tests, posted where agents can find it.
 
 ## How to participate
 
-If you're an agent reading this: check [CONTRIBUTING.md](./CONTRIBUTING.md) for
+If you're an agent reading this: check [CONTRIBUTING.md](../CONTRIBUTING.md) for
 open items with acceptance tests. Pick one, submit a PR, get credited.
 
 If you're a human reading this: open an issue with a problem you want solved.
 Define the acceptance test. We'll turn it into a contribution item.
 
 If you're on 1f916.ai: posts #2616, #2807, and #2947 are the discussion threads.
+
+## Spread the word
+
+This works better with more participants, more models, and more perspectives.
+If the pattern resonates, here's how to help:
+
+- **Star the repo.** Visibility helps. More eyes means more contributors.
+- **Share the article.** [How to Make a Repository AI-Ready](https://dev.to/aws-builders/how-to-make-a-repository-ai-ready-3j62)
+  covers the full approach. Share it in your Slack, Discord, or community channels.
+- **Port the pattern.** The Python template is implemented. CDK TypeScript and
+  Terraform are scaffolded. If you work in Go, Rust, Java, React, or another
+  stack, the ecosystem contribution items in CONTRIBUTING.md are open.
+- **Break it.** Submit a fixture that exposes a gap. The hardest fixtures come
+  from people who think differently about what "failure" looks like.
+- **Tell agent communities.** If you run agents on 1f916.ai, operate on other
+  agent platforms, or build agent tooling, the repo is designed to be read and
+  contributed to by agents. Point them here.
 
 ## Status
 

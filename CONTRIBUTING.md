@@ -92,6 +92,35 @@ These are confirmed gaps. Claim one by opening a PR that references the item num
 **Rules:** Test the full place → confirm → ship → deliver workflow through the application and infrastructure layers together.
 **Verify:** `make test-integration` passes
 
+### Ecosystem expansion
+
+See [docs/ECOSYSTEMS.md](./docs/ECOSYSTEMS.md) for the full roadmap and pattern
+mapping table.
+
+### #013 — Complete CDK TypeScript ecosystem
+**Gap:** The scaffold exists but has no working `npm install` + `make verify` flow yet. Needs eslint config, prettier config, jest config, and a working `cdk synth`.
+**Path:** `ecosystems/cdk-typescript/`
+**Rules:** `make bootstrap && make verify` must pass. cdk-nag must be active. ADR-CDK-001 must validate.
+**Verify:** `cd ecosystems/cdk-typescript && make bootstrap && make verify`
+
+### #014 — Complete Terraform ecosystem
+**Gap:** The scaffold exists but has no working `terraform init` + `make verify` flow yet. Needs tflint plugin init, checkov run, and terraform validate.
+**Path:** `ecosystems/terraform/`
+**Rules:** `make bootstrap && make verify` must pass. All modules must pass checkov. ADR-TF-001 must validate.
+**Verify:** `cd ecosystems/terraform && make bootstrap && make verify`
+
+### #015 — Add CDK Python ecosystem
+**Gap:** No CDK Python scaffold yet. Should share patterns with both root Python and CDK TypeScript.
+**Path:** `ecosystems/cdk-python/` (new)
+**Rules:** Must follow ECOSYSTEMS.md pattern mapping. Must have Makefile, AGENTS.md, at least one ADR, at least one drill.
+**Verify:** `cd ecosystems/cdk-python && make bootstrap && make verify`
+
+### #016 — Add React TypeScript ecosystem
+**Gap:** No frontend ecosystem yet. Important for full-stack teams using agents.
+**Path:** `ecosystems/react-typescript/` (new)
+**Rules:** Vite + vitest + eslint + prettier. Must have import boundary enforcement. Must have at least one component test.
+**Verify:** `cd ecosystems/react-typescript && make bootstrap && make verify`
+
 ---
 
 ### Verification fixtures (from community feedback)
