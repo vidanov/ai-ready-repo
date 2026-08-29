@@ -5,25 +5,34 @@ Agent evaluation runner.
 Runs representative coding tasks against this repository and reports
 task success rate, runtime, and any regressions from the baseline.
 
-Measures five dimensions per task (inspired by Captain's eval harness):
+Measures seven dimensions per task:
   - verify_pass: did the verification command exit as expected?
+  - reason_match: did the output contain the expected_reason string?
+  - done_condition: did the task's specific done-condition pass?
   - tests_disabled: did the agent skip/xfail tests to make them pass?
   - protected_touched: did the agent modify CODEOWNERS-protected paths?
   - diff_lines: total insertions + deletions (scope creep signal)
-  - done_condition: did the task's specific done-condition pass?
+  - origin: where the task came from (birth/stranger/second-incident/live)
+
+Tasks are defined in scripts/eval_tasks/. Each task is a YAML file with:
+  Required:
+    - description: what the agent should do
+    - verification: command to verify the result
+    - expected_exit_code: 0 for success
+    - origin: birth | stranger | second-incident | live
+  Optional:
+    - expected_reason: string that must appear in stdout/stderr
+    - done_condition: shell command that exits 0 if task completed
+    - protected_paths: list of paths the agent must not touch
+    - max_diff_lines: diff size cap
+
+Failed-to-load tasks (bad YAML, missing fields) count as failures in
+the denominator, not skips. The rate is over all discovered files.
 
 Usage:
     python scripts/run_evals.py                  # run all tasks
     python scripts/run_evals.py --task add-field # run one task
     python scripts/run_evals.py --baseline       # update baseline
-
-Tasks are defined in scripts/eval_tasks/. Each task is a YAML file with:
-  - description: what the agent should do
-  - verification: command to verify the result
-  - expected_exit_code: 0 for success
-  - done_condition: (optional) shell command that exits 0 if task completed
-  - protected_paths: (optional) list of paths the agent must not touch
-  - max_diff_lines: (optional) diff size cap
 
 Exit code:
   0 — all tasks passed and success rate >= baseline
@@ -41,6 +50,9 @@ from pathlib import Path
 TASKS_DIR = Path(__file__).parent / "eval_tasks"
 BASELINE_FILE = Path(__file__).parent / "eval_baseline.json"
 CODEOWNERS_FILE = Path(__file__).parent.parent / ".github" / "CODEOWNERS"
+
+VALID_ORIGINS = {"birth", "stranger", "second-incident", "live"}
+REQUIRED_FIELDS = {"description", "verification", "expected_exit_code", "origin"}
 
 # Patterns that indicate tests were disabled rather than fixed
 SKIP_PATTERNS = [
@@ -76,7 +88,6 @@ def parse_codeowners() -> list[str]:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        # First token is the path pattern, rest are owners
         parts = line.split()
         if parts:
             paths.append(parts[0].lstrip("/"))
@@ -97,16 +108,14 @@ def get_diff_stats() -> tuple[int, list[str]]:
     if not lines:
         return 0, []
 
-    # Parse changed files
     changed = []
-    for line in lines[:-1]:  # last line is the summary
+    for line in lines[:-1]:
         parts = line.strip().split("|")
         if len(parts) >= 1:
             fname = parts[0].strip()
             if fname:
                 changed.append(fname)
 
-    # Parse summary line: "X files changed, Y insertions(+), Z deletions(-)"
     summary = lines[-1] if lines else ""
     total = 0
     for match in re.finditer(r"(\d+) insertion", summary):
@@ -129,7 +138,6 @@ def count_tests_disabled_in_diff() -> int:
 
     count = 0
     for line in result.stdout.splitlines():
-        # Only count added lines (starting with +, not ++)
         if line.startswith("+") and not line.startswith("+++"):
             if SKIP_RE.search(line):
                 count += 1
@@ -145,7 +153,6 @@ def check_protected_paths(changed_files: list[str]) -> list[str]:
     touched = []
     for f in changed_files:
         for prefix in protected_prefixes:
-            # Handle glob patterns: strip trailing wildcards for prefix match
             clean = prefix.rstrip("*").rstrip("/")
             if f.startswith(clean):
                 touched.append(f)
@@ -153,10 +160,87 @@ def check_protected_paths(changed_files: list[str]) -> list[str]:
     return touched
 
 
+def validate_task(task: dict, task_path: Path) -> list[str]:
+    """Return list of validation errors. Empty list means valid."""
+    errors = []
+    missing = REQUIRED_FIELDS - set(task.keys())
+    if missing:
+        errors.append(f"missing required fields: {', '.join(sorted(missing))}")
+
+    origin = task.get("origin")
+    if origin and origin not in VALID_ORIGINS:
+        errors.append(
+            f"origin '{origin}' not in {sorted(VALID_ORIGINS)}"
+        )
+    return errors
+
+
 def run_task(task_path: Path) -> dict[str, object]:
+    """Run a single eval task. Returns result dict.
+
+    If the YAML fails to parse or is missing required fields, the task
+    counts as a failure (not a skip). This keeps the denominator honest.
+    """
     import yaml  # optional dep — only needed when running evals
 
-    task = yaml.safe_load(task_path.read_text())
+    # Attempt to load and validate the task file
+    try:
+        task = yaml.safe_load(task_path.read_text())
+    except Exception as e:
+        return {
+            "task": task_path.stem,
+            "passed": False,
+            "load_error": f"YAML parse error: {e}",
+            "verify_pass": False,
+            "reason_match": False,
+            "done_condition_ok": False,
+            "tests_disabled": 0,
+            "protected_touched": [],
+            "diff_lines": 0,
+            "changed_files": [],
+            "elapsed": 0,
+            "origin": "unknown",
+            "stdout": "",
+            "stderr": "",
+        }
+
+    if not isinstance(task, dict):
+        return {
+            "task": task_path.stem,
+            "passed": False,
+            "load_error": "YAML did not produce a dict",
+            "verify_pass": False,
+            "reason_match": False,
+            "done_condition_ok": False,
+            "tests_disabled": 0,
+            "protected_touched": [],
+            "diff_lines": 0,
+            "changed_files": [],
+            "elapsed": 0,
+            "origin": "unknown",
+            "stdout": "",
+            "stderr": "",
+        }
+
+    validation_errors = validate_task(task, task_path)
+    if validation_errors:
+        return {
+            "task": task_path.stem,
+            "passed": False,
+            "load_error": "; ".join(validation_errors),
+            "verify_pass": False,
+            "reason_match": False,
+            "done_condition_ok": False,
+            "tests_disabled": 0,
+            "protected_touched": [],
+            "diff_lines": 0,
+            "changed_files": [],
+            "elapsed": 0,
+            "origin": task.get("origin", "unknown"),
+            "stdout": "",
+            "stderr": "",
+        }
+
     start = time.monotonic()
 
     # Run primary verification
@@ -168,6 +252,14 @@ def run_task(task_path: Path) -> dict[str, object]:
     )
     elapsed = time.monotonic() - start
     verify_pass = result.returncode == task.get("expected_exit_code", 0)
+
+    # Check expected_reason in output (stdout + stderr)
+    # Proves the gate knows WHY it stopped, not just that it stopped.
+    reason_match = True
+    expected_reason = task.get("expected_reason")
+    if expected_reason:
+        combined_output = result.stdout + result.stderr
+        reason_match = expected_reason in combined_output
 
     # Run done_condition if specified
     done_ok = True
@@ -197,9 +289,9 @@ def run_task(task_path: Path) -> dict[str, object]:
                 if f.startswith(p.lstrip("/")):
                     extra_protected.append(f)
 
-    # A task passes only if all dimensions are clean
     passed = (
         verify_pass
+        and reason_match
         and done_ok
         and tests_disabled == 0
         and not protected_touched
@@ -211,12 +303,14 @@ def run_task(task_path: Path) -> dict[str, object]:
         "task": task_path.stem,
         "passed": passed,
         "verify_pass": verify_pass,
+        "reason_match": reason_match,
         "done_condition_ok": done_ok,
         "tests_disabled": tests_disabled,
         "protected_touched": [str(p) for p in protected_touched],
         "diff_lines": diff_lines,
         "changed_files": changed_files,
         "elapsed": round(elapsed, 2),
+        "origin": task.get("origin", "unknown"),
         "stdout": result.stdout[:500],
         "stderr": result.stderr[:500],
     }
@@ -242,14 +336,30 @@ def main() -> int:
         return 1
 
     results = [run_task(t) for t in task_files]
+
+    # Denominator is ALL discovered files, including failed-to-load.
+    # A task that can't load is a failure, not a skip.
     passed = sum(1 for r in results if r["passed"])
+    failed_load = sum(1 for r in results if r.get("load_error"))
     total = len(results)
     rate = passed / total if total else 0.0
 
-    print(f"\nEval results: {passed}/{total} passed ({rate:.0%})\n")
+    print(f"\nEval results: {passed}/{total} passed ({rate:.0%})")
+    if failed_load:
+        print(f"  ⚠ {failed_load} task(s) failed to load (counted as failures)\n")
+    else:
+        print()
+
     for r in results:
         icon = "✓" if r["passed"] else "✗"
+
+        if r.get("load_error"):
+            print(f"  {icon} {r['task']} [LOAD ERROR: {r['load_error']}]")
+            continue
+
         flags = []
+        if not r.get("reason_match", True):
+            flags.append("reason:missing")
         if r["tests_disabled"]:
             flags.append(f"skip:{r['tests_disabled']}")
         if r["protected_touched"]:
@@ -257,7 +367,8 @@ def main() -> int:
         if r["diff_lines"] > 0:
             flags.append(f"diff:{r['diff_lines']}")
         flag_str = f" [{', '.join(flags)}]" if flags else ""
-        print(f"  {icon} {r['task']} ({r['elapsed']}s){flag_str}")
+        origin_str = f" ({r.get('origin', '?')})" if r.get("origin") else ""
+        print(f"  {icon} {r['task']} ({r['elapsed']}s){flag_str}{origin_str}")
 
     baseline = load_baseline()
     prior_rate = baseline.get("success_rate", 0.0)

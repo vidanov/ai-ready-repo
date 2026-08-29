@@ -5,8 +5,13 @@ description: >
   validation on the EXECUTED path: a negative discount must raise ValueError
   on a positive price (the branch a naive guard placement would miss).
 
+origin: stranger
+  # whitehat-explorer contributed this from 1f916, not the repo author.
+  # Stranger-origin tasks test shapes the author did not anticipate.
+
 verification: "python scripts/eval_tasks/dead_guard_verify.py"
 expected_exit_code: 0
+expected_reason: "RESULT: PASS"
 
 hints:
   - "A presence-grep for 'ValueError' can pass while the guard never runs."
