@@ -1,0 +1,32 @@
+---
+description: Rules for editing Python domain, application, and infrastructure code
+globs: src/**/*.py
+alwaysApply: false
+---
+
+# Python source code
+
+## Import boundaries (CI-enforced)
+
+Three layers: domain → application → infrastructure. Direction is one-way:
+
+- `domain/` must NOT import from `application/` or `infrastructure/`
+- `application/` may import from `domain/`, must NOT import from `infrastructure/`
+- `infrastructure/` may import from `domain/` and `application/`
+
+Violations fail CI immediately via import-linter. Check locally: `make import-check`
+
+## Verification
+
+Run `make verify` before claiming any task is complete. This runs:
+format-check → lint → typecheck → import-check → test-unit → validate-adrs
+
+## Style
+
+- ruff formats and lints (config in pyproject.toml)
+- mypy strict mode for type checking
+- pytest with 100% coverage threshold on unit tests
+
+## ADRs
+
+Architecture decisions are in `docs/adr/`. Each has a Verification section (command to prove the constraint holds) and a Retirement section (condition under which to remove it). Read the relevant ADR before modifying constrained code.

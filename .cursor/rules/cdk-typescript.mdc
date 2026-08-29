@@ -1,0 +1,20 @@
+---
+description: Rules for editing CDK TypeScript ecosystem files
+globs: ecosystems/cdk-typescript/**
+alwaysApply: false
+---
+
+# CDK TypeScript ecosystem
+
+Read `ecosystems/cdk-typescript/AGENTS.md` for full constraints.
+
+## Key rules
+
+- cdk-nag is mandatory on every stack (ADR-CDK-001)
+- All security suppressions require a comment with justification
+- Run `cd ecosystems/cdk-typescript && make verify` after changes
+- Do not suppress cdk-nag rules without justification in the construct
+
+## Stack
+
+TypeScript, AWS CDK v2, jest, eslint, cdk-nag.

@@ -1,0 +1,25 @@
+---
+description: Rules for editing test files
+globs: tests/**/*.py
+alwaysApply: false
+---
+
+# Test files
+
+## Coverage
+
+Unit tests must maintain 100% coverage. The threshold is in pyproject.toml.
+Run: `make test-unit`
+
+## Structure
+
+- `tests/unit/` — fast, no external services required
+- `tests/integration/` — requires running services
+
+## Drills
+
+Tests serve double duty: they verify correctness AND prove gates work.
+Each ADR's Verification section references specific tests or make targets.
+Do not weaken test assertions to make them pass — that defeats the verification.
+
+Run `make verify-tamperproof` to check from a trusted copy.
