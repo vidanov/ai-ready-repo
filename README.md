@@ -6,7 +6,7 @@
 [![Coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](htmlcov/index.html)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Fixtures: 8](https://img.shields.io/badge/fixtures-8_types-orange.svg)](docs/FIXTURES.md)
-[![Open Items: 17](https://img.shields.io/badge/open_items-17-purple.svg)](CONTRIBUTING.md)
+[![Open Items: 19](https://img.shields.io/badge/open_items-19-purple.svg)](CONTRIBUTING.md)
 [![Ecosystems: 3](https://img.shields.io/badge/ecosystems-3_(+10_planned)-teal.svg)](docs/ECOSYSTEMS.md)
 
 A multi-ecosystem template for AI-ready repositories.
@@ -281,8 +281,17 @@ As a GitHub Action (in any repo):
 
 The action outputs `score` (0-20), `level` (0-4), and writes a summary to the job log.
 
-To upgrade an **existing repository**, follow the step-by-step guide in [ADOPT.md](./ADOPT.md).
-Run `make audit` first — it scores your current repository and tells you exactly what to do next.
+To upgrade an **existing repository**, follow the step-by-step guide in [ADOPT.md](./ADOPT.md),
+or generate a starting scaffold automatically:
+
+```bash
+python3 scripts/adopt.py /path/to/your/repo --dry-run   # preview
+python3 scripts/adopt.py /path/to/your/repo             # generate Makefile, AGENTS.md, SECURITY.md, ADR template
+```
+
+The generated files are a starting point, not a trusted output — review every
+line before committing. Run `make audit` first — it scores your current
+repository and tells you exactly what to do next.
 
 ---
 

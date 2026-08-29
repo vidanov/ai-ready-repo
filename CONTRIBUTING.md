@@ -97,7 +97,7 @@ These are confirmed gaps. Claim one by opening a PR that references the item num
 See [docs/ECOSYSTEMS.md](./docs/ECOSYSTEMS.md) for the full roadmap and pattern
 mapping table.
 
-### #013 — Complete CDK TypeScript ecosystem
+### #021 — Complete CDK TypeScript ecosystem
 **Gap:** The scaffold exists but has no working `npm install` + `make verify` flow yet. Needs eslint config, prettier config, jest config, and a working `cdk synth`.
 **Path:** `ecosystems/cdk-typescript/`
 **Rules:** `make bootstrap && make verify` must pass. cdk-nag must be active. ADR-CDK-001 must validate.
