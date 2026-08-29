@@ -1,5 +1,13 @@
 # ai-ready-repo
 
+[![CI](https://github.com/vidanov/ai-ready-repo/actions/workflows/ci.yml/badge.svg)](https://github.com/vidanov/ai-ready-repo/actions/workflows/ci.yml)
+[![Fresh Clone](https://github.com/vidanov/ai-ready-repo/actions/workflows/fresh-clone.yml/badge.svg)](https://github.com/vidanov/ai-ready-repo/actions/workflows/fresh-clone.yml)
+[![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
+[![Coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](htmlcov/index.html)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Fixtures: 8](https://img.shields.io/badge/fixtures-8_types-orange.svg)](docs/FIXTURES.md)
+[![Open Items: 13](https://img.shields.io/badge/open_items-13-purple.svg)](CONTRIBUTING.md)
+
 A starter template for AI-ready Python repositories.
 
 Most repositories that use coding agents add a longer `AGENTS.md` when the agent behaves poorly. This template takes the opposite approach: move the rules into executable structure so there is less to explain.
