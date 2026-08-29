@@ -6,9 +6,10 @@
 [![Coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](htmlcov/index.html)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Fixtures: 8](https://img.shields.io/badge/fixtures-8_types-orange.svg)](docs/FIXTURES.md)
-[![Open Items: 13](https://img.shields.io/badge/open_items-13-purple.svg)](CONTRIBUTING.md)
+[![Open Items: 17](https://img.shields.io/badge/open_items-17-purple.svg)](CONTRIBUTING.md)
+[![Ecosystems: 3](https://img.shields.io/badge/ecosystems-3_(+10_planned)-teal.svg)](docs/ECOSYSTEMS.md)
 
-A starter template for AI-ready Python repositories.
+A multi-ecosystem template for AI-ready repositories.
 
 Most repositories that use coding agents add a longer `AGENTS.md` when the agent behaves poorly. This template takes the opposite approach: move the rules into executable structure so there is less to explain.
 
@@ -27,10 +28,17 @@ Most repositories that use coding agents add a longer `AGENTS.md` when the agent
 | **Linter** | ruff — security checks, import order, bug patterns |
 | **Type checker** | mypy strict — converts assumptions into contracts |
 | **Import boundaries** | import-linter — domain/application/infrastructure contracts enforced by CI |
-| **Unit tests** | pytest with coverage threshold |
-| **ADR validation** | `scripts/validate_adrs.py` — every ADR must have id, status, scope, and a Verification section |
+| **Unit tests** | pytest with 100% coverage threshold |
+| **ADR validation** | `scripts/validate_adrs.py` — every ADR must have id, status, scope, Verification, and Retirement |
+| **Verification drills** | `make drill-*` — proves each gate can actually reject a violation |
+| **Tamper-proof verification** | `make verify-tamperproof` — runs checks from a trusted copy agents can't weaken |
+| **Fixture catalog** | 8 fixture types documented in `docs/FIXTURES.md`, community-attributed |
+| **Agent eval tasks** | `scripts/eval_tasks/` with baseline tracking and 5% regression gate |
 | **Daily eval workflow** | `.github/workflows/eval-daily.yml` — runs representative tasks on a schedule |
+| **Fresh-clone CI** | `.github/workflows/fresh-clone.yml` — daily check that bootstrap works from zero |
+| **Security scanning** | `.github/workflows/security.yml` — dependency review + gitleaks |
 | **CODEOWNERS** | Routes CI, ADR, and infrastructure changes to reviewers |
+| **Multi-ecosystem** | CDK TypeScript, Terraform scaffolds + 10 more planned in `docs/ECOSYSTEMS.md` |
 | **AGENTS.md** | Minimal — only what cannot be inferred from running the tools |
 
 ---
@@ -68,27 +76,46 @@ This is identical to what CI runs.
 ## Project structure
 
 ```
-src/ai_ready_repo/
-  domain/           Pure business logic. No external imports.
-  application/      Use cases. May import domain.
-  infrastructure/   External services. May import domain + application.
-
-tests/
-  unit/             Fast, no services required.
-  integration/      Requires running services.
-
-docs/adr/           Architecture Decision Records.
-scripts/
-  validate_adrs.py  ADR format checker (run by CI).
-  run_evals.py      Agent evaluation runner.
-  eval_tasks/       YAML task definitions for evaluation.
-
-.github/
-  workflows/ci.yml              Runs on every PR.
-  workflows/fresh-clone.yml     Verifies bootstrap works from a clean checkout.
-  workflows/security.yml        Dependency review + gitleaks secret scan.
-  workflows/eval-daily.yml      Runs agent evals on a schedule.
-  CODEOWNERS                    Routes reviews to the right people.
+ai-ready-repo/
+├── src/ai_ready_repo/                Python template (implemented)
+│   ├── domain/                       Pure business logic. No external imports.
+│   ├── application/                  Use cases. May import domain.
+│   └── infrastructure/               External services. May import domain + application.
+│
+├── tests/
+│   ├── unit/                         Fast, no services required.
+│   └── integration/                  Requires running services.
+│
+├── docs/
+│   ├── adr/                          Architecture Decision Records (with firing + retirement).
+│   ├── articles/                     Published articles and publication index.
+│   ├── FIXTURES.md                   Verification fixture catalog (7 types, attributed).
+│   ├── ECOSYSTEMS.md                 Multi-ecosystem roadmap and pattern mapping.
+│   └── MISSION.md                    Project vision and collaboration model.
+│
+├── scripts/
+│   ├── eval_tasks/                   YAML task definitions for agent evaluation.
+│   ├── validate_adrs.py             ADR format checker (run by CI).
+│   ├── run_evals.py                 Agent evaluation runner with baseline tracking.
+│   ├── verify_tamperproof.sh        Oracle-tampering protection (trusted-copy verification).
+│   └── drill_transition_guard.py    Drill: proves domain guard can convict.
+│
+├── ecosystems/
+│   ├── cdk-typescript/               AWS CDK v2, TypeScript, jest, cdk-nag (scaffold).
+│   └── terraform/                    Terraform, tflint, checkov, module boundaries (scaffold).
+│
+├── .github/
+│   ├── workflows/ci.yml             Runs on every PR.
+│   ├── workflows/fresh-clone.yml    Verifies bootstrap from clean checkout (daily).
+│   ├── workflows/security.yml       Dependency review + gitleaks secret scan.
+│   ├── workflows/eval-daily.yml     Runs agent evals on a schedule.
+│   └── CODEOWNERS                   Routes reviews to the right people.
+│
+├── Makefile                          Task interface: verify, drills, eval, audit.
+├── AGENTS.md                         Agent guidance (minimal, non-redundant).
+├── CONTRIBUTING.md                   16 open items with acceptance tests.
+├── ADOPT.md                          Step-by-step adoption guide for existing repos.
+└── LEARNINGS.md                      Patterns discovered while building.
 ```
 
 ---
