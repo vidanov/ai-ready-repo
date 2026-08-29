@@ -179,6 +179,24 @@ original author did not imagine.
 
 ---
 
+## Ecosystems
+
+The ai-ready pattern works across stacks. Each ecosystem in `ecosystems/`
+applies the same principles (executable rules, behavioral verification, drills)
+with the native tools for that stack.
+
+| Ecosystem | Path | Stack | Status |
+|-----------|------|-------|--------|
+| **Python** | root (`src/`, `tests/`) | Python, uv, ruff, mypy, pytest | ✅ Complete |
+| **CDK TypeScript** | `ecosystems/cdk-typescript/` | AWS CDK v2, TypeScript, jest, eslint, cdk-nag | 🟡 Scaffold |
+| **Terraform** | `ecosystems/terraform/` | Terraform, tflint, checkov | 🟡 Scaffold |
+| CDK Python, React, Next.js, Go, Rust, Java/Spring | planned | — | See [docs/ECOSYSTEMS.md](./docs/ECOSYSTEMS.md) |
+
+Each ecosystem has its own `make bootstrap && make verify`. The full roadmap
+and pattern mapping table are in [docs/ECOSYSTEMS.md](./docs/ECOSYSTEMS.md).
+
+---
+
 ## Adapting this template
 
 1. Replace the `Order` domain example with your actual domain model.
