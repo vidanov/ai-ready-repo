@@ -1,0 +1,122 @@
+[
+  {
+    "id": "destructive-rm-rf-root",
+    "pattern": "rm\\s+-rf\\s+/[^\\s]",
+    "category": "destructive-filesystem",
+    "description": "Recursive forced removal from root or near-root paths"
+  },
+  {
+    "id": "destructive-rm-rf-home",
+    "pattern": "rm\\s+-rf\\s+~",
+    "category": "destructive-filesystem",
+    "description": "Recursive forced removal of home directory"
+  },
+  {
+    "id": "destructive-mkfs",
+    "pattern": "mkfs\\.",
+    "category": "destructive-filesystem",
+    "description": "Filesystem format commands"
+  },
+  {
+    "id": "destructive-dd-of-dev",
+    "pattern": "dd\\s+.*of=/dev/",
+    "category": "destructive-filesystem",
+    "description": "Raw device writes via dd"
+  },
+  {
+    "id": "git-force-push",
+    "pattern": "git\\s+push\\s+.*--force",
+    "category": "git-destructive",
+    "description": "Force push overwrites remote history"
+  },
+  {
+    "id": "git-reset-hard",
+    "pattern": "git\\s+reset\\s+--hard",
+    "category": "git-destructive",
+    "description": "Hard reset discards uncommitted work"
+  },
+  {
+    "id": "git-clean-force",
+    "pattern": "git\\s+clean\\s+-[a-zA-Z]*f",
+    "category": "git-destructive",
+    "description": "Force clean removes untracked files irreversibly"
+  },
+  {
+    "id": "git-branch-delete-force",
+    "pattern": "git\\s+branch\\s+-D",
+    "category": "git-destructive",
+    "description": "Force-delete branch without merge check"
+  },
+  {
+    "id": "secret-env-dump",
+    "pattern": "printenv|env\\s*$|set\\s*$",
+    "category": "secret-exfiltration",
+    "description": "Dump full environment (may contain secrets)"
+  },
+  {
+    "id": "secret-cat-env",
+    "pattern": "cat\\s+\\.env(?:\\s|$)",
+    "category": "secret-exfiltration",
+    "description": "Read .env file (likely contains secrets)"
+  },
+  {
+    "id": "secret-cat-credentials",
+    "pattern": "cat\\s+.*credentials",
+    "category": "secret-exfiltration",
+    "description": "Read credentials files"
+  },
+  {
+    "id": "secret-cat-private-key",
+    "pattern": "cat\\s+.*id_rsa|cat\\s+.*\\.pem",
+    "category": "secret-exfiltration",
+    "description": "Read private key files"
+  },
+  {
+    "id": "network-curl-post-secret",
+    "pattern": "curl\\s+.*-d.*\\$\\{?\\w*(?:KEY|TOKEN|SECRET|PASSWORD)",
+    "category": "secret-exfiltration",
+    "description": "POST request with secret variable in body"
+  },
+  {
+    "id": "permission-chmod-world-write",
+    "pattern": "chmod\\s+.*777",
+    "category": "permission-escalation",
+    "description": "World-writable permissions"
+  },
+  {
+    "id": "permission-chmod-setuid",
+    "pattern": "chmod\\s+[u+]*s",
+    "category": "permission-escalation",
+    "description": "Set-uid bit enables privilege escalation"
+  },
+  {
+    "id": "ci-tamper-workflow",
+    "pattern": ">\\.github/workflows/",
+    "category": "ci-tampering",
+    "description": "Redirect output into CI workflow files"
+  },
+  {
+    "id": "ci-tamper-codeowners",
+    "pattern": ">.*CODEOWNERS",
+    "category": "ci-tampering",
+    "description": "Overwrite CODEOWNERS file"
+  },
+  {
+    "id": "verify-skip-no-verify",
+    "pattern": "--no-verify",
+    "category": "verification-bypass",
+    "description": "Skip pre-commit or pre-push hooks"
+  },
+  {
+    "id": "verify-skip-force-merge",
+    "pattern": "gh\\s+pr\\s+merge\\s+.*--admin",
+    "category": "verification-bypass",
+    "description": "Merge bypassing required reviews and status checks"
+  },
+  {
+    "id": "verify-disable-check",
+    "pattern": "gh\\s+api.*required_status_checks",
+    "category": "verification-bypass",
+    "description": "Modify required status checks via API"
+  }
+]

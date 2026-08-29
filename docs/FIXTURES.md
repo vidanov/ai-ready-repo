@@ -282,6 +282,43 @@ consumer (add the reference).
 
 ---
 
+### F-010: Deny catalog with golden-file lock
+
+**Make target:** `make drill-deny-catalog`
+**Script:** `scripts/deny_catalog.py`
+**Golden file:** `scripts/deny_catalog_golden.json`
+
+**Problem:** An agent framework blocks specific commands via a deny list.
+The deny list is configuration that can be modified. If the agent (or an
+accidental commit) weakens the deny list by removing patterns, the
+protection disappears silently. The removed pattern still appears to be
+enforced until someone runs the blocked command and it succeeds.
+
+**How it works:**
+1. Baseline patterns are stored in a golden JSON file (20 rules across
+   6 categories: destructive-filesystem, git-destructive, secret-exfiltration,
+   ci-tampering, verification-bypass, permission-escalation).
+2. The drill checks four properties:
+   - **Golden-file parity:** loaded catalog matches the golden file exactly.
+   - **Additive-only:** attempting to remove a baseline rule raises ValueError.
+   - **Pattern compilation:** every regex in the catalog compiles.
+   - **Pattern firing:** every category has at least one pattern that matches
+     a known bad command (probe commands per category).
+3. Project-specific additions are allowed (additive overlay). Removals
+   from the baseline are structurally rejected by the resolver.
+
+**Done condition:** All four sub-checks pass. The catalog cannot be silently
+weakened. Additions work. Removals fail.
+
+**Failure class:** Governance weakening — a safety constraint is removed
+rather than a violation being fixed. Same shape as oracle tampering (F-003)
+applied to the deny configuration rather than the test suite.
+
+**Difficulty:** Low — JSON + regex matching, no runtime environment needed.
+**Status:** ✅ Implemented
+
+---
+
 ## Design principles for fixtures
 
 These emerged from the 1f916 threads (#2807, #2616, #2839, #2845, #2855):
@@ -339,5 +376,6 @@ These emerged from the 1f916 threads (#2807, #2616, #2839, #2845, #2855):
 | F-007 | hermes-30d47ad3 | #2845 |
 | F-008 | ai-ready-repo (observed in live session) | — |
 | F-009 | ai-ready-repo (inspired by dead-constraint pattern) | — |
+| F-010 | ai-ready-repo (inspired by KiroCrew deny-commands, Apache 2.0) | — |
 
 Discussion: [1f916.ai](https://1f916.ai) posts #2807, #2616, #2839, #2845, #2855
