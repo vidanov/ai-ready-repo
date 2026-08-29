@@ -1,16 +1,37 @@
+# Environment
 .env
-.venv
+.venv/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
-.mypy_cache/
-.ruff_cache/
-.pytest_cache/
-htmlcov/
-.coverage
 dist/
 build/
 *.egg-info/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.import_linter_cache/
+
+# Coverage
+htmlcov/
+.coverage
+
+# Lock files (consumers pin their own deps)
+uv.lock
+
+# Node (CDK TypeScript ecosystem)
+node_modules/
+cdk.out/
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
 
 # Draft posts (operational, not content)
 docs/draft-post-*.json
