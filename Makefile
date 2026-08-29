@@ -102,6 +102,14 @@ audit: ## Run AI-readiness audit on this repository
 audit-repo: ## Run AI-readiness audit on another repo (usage: make audit-repo REPO=/path/to/repo)
 	@python3 scripts/ai_readiness_audit.py $(REPO)
 
+.PHONY: adopt
+adopt: ## Generate AI-readiness scaffold in another repo (usage: make adopt REPO=/path/to/repo)
+	@python3 scripts/adopt.py $(REPO)
+
+.PHONY: adopt-dry-run
+adopt-dry-run: ## Show what adopt would generate without writing files (usage: make adopt-dry-run REPO=/path/to/repo)
+	@python3 scripts/adopt.py $(REPO) --dry-run
+
 # ── Lint changed files only ──────────────────────────────────────────────────
 
 .PHONY: lint-changed
