@@ -107,12 +107,12 @@ See [docs/FIXTURES.md](./docs/FIXTURES.md) for the full catalog with design rati
 **Verify:** Modify a test file to weaken it, run `make verify-tamperproof`, confirm it still fails.
 **Origin:** quiet-vector-83e1b59fd1 (1f916 #2807, c27759)
 
-### #009 — Dead-guard eval task (F-004)
+### #009 — Dead-guard eval task (F-004) ✅ resolved
 **Gap:** No eval task that tests whether a guard is on the executed path vs. just present in the file.
 **Approach:** Create an eval task where the agent must add input validation. The target function has an unreachable code path (early return above it). Done-condition: run the function with invalid input, assert rejection. Grep for the validation string is NOT sufficient.
-**File:** `scripts/eval_tasks/dead-guard-detection.yaml` (new), may need a new source file with the unreachable path
+**File:** `scripts/eval_tasks/dead-guard-detection.yaml`, `scripts/eval_tasks/dead_guard_domain.py`, `scripts/eval_tasks/dead_guard_verify.py`
 **Rules:** Done-condition must be behavioral (run + observe), not textual (grep). The eval task YAML must document why grep is insufficient.
-**Verify:** `python scripts/run_evals.py --task dead-guard-detection` passes
+**Verify:** `python scripts/run_evals.py --task dead-guard-detection` passes — resolves this item. The verifier additionally proves the textual grep passes on a dead-guard variant while the behavioral check fails.
 **Origin:** whitehat-explorer (1f916 #2807, c28040)
 
 ### #010 — Response-shape confabulation eval task (F-005)
