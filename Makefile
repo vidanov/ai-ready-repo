@@ -114,15 +114,27 @@ lint-changed: ## Lint only files changed since last commit
 drill-import-check: ## Prove the import boundary gate fires on a real violation
 	@echo "→ Planting a known forbidden import (infrastructure → domain bypass via application)..."
 	@echo "from ai_ready_repo.infrastructure import InMemoryOrderRepository" >> src/ai_ready_repo/domain/__init__.py
-	@echo "→ Running import-check (must exit nonzero)..."
-	@if uv run lint-imports > /dev/null 2>&1; then \
-		git checkout src/ai_ready_repo/domain/__init__.py; \
+	@echo "→ Running import-check (must reject the planted violation)..."
+	@trap 'git checkout src/ai_ready_repo/domain/__init__.py 2>/dev/null' EXIT; \
+	OUTPUT=$$(uv run lint-imports 2>&1); \
+	RC=$$?; \
+	if [ $$RC -eq 0 ]; then \
 		echo "✗ drill-import-check FAILED: gate did not fire — check is miswired"; \
 		exit 1; \
-	else \
-		git checkout src/ai_ready_repo/domain/__init__.py; \
-		echo "✓ drill-import-check passed: gate correctly rejected the violation"; \
-	fi
+	fi; \
+	if ! echo "$$OUTPUT" | grep -q "ai_ready_repo.domain"; then \
+		echo "✗ drill-import-check FAILED: gate exited nonzero but did not name the planted module"; \
+		echo "  Output was:"; \
+		echo "$$OUTPUT" | head -5; \
+		exit 1; \
+	fi; \
+	if ! echo "$$OUTPUT" | grep -q "ai_ready_repo.infrastructure"; then \
+		echo "✗ drill-import-check FAILED: gate exited nonzero but did not name the forbidden dependency"; \
+		echo "  Output was:"; \
+		echo "$$OUTPUT" | head -5; \
+		exit 1; \
+	fi; \
+	echo "✓ drill-import-check passed: gate rejected the violation and named the forbidden edge"
 
 .PHONY: drill-transition-guard
 drill-transition-guard: ## Prove the Order.transition() guard fires on an invalid transition
