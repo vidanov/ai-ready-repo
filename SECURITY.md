@@ -94,3 +94,30 @@ The kernel enforces the boundary, not the process's instructions.
 A correctly scoped token on an unprotected branch still allows direct merge.
 Branch protection on a repository where the agent holds an admin token still
 allows `gh pr merge --admin`. Drop either layer and the agent finds the gap.
+
+### Alternative: zero-token model
+
+A stricter approach gives the agent no GitHub token at all. The agent works
+on files locally. All Git operations (commit, push, PR creation) flow through
+a separate process that holds the write credential and applies it only to
+deterministic operations the agent cannot influence.
+
+In this model:
+- The agent's shell has no `GITHUB_TOKEN`, `GH_TOKEN`, or stored `gh auth`
+  session. `git push` and `gh` commands fail with authentication errors.
+- A post-step hook diffs the worktree, commits changes, and pushes using
+  a credential the agent never sees.
+- PR comments and status updates go through engine-owned reporters, not
+  agent-initiated commands.
+
+The security property is enforced by absence, not by filtering. An agent
+that is prompt-injected into attempting `gh secret set` or `git push --force`
+has nothing to authenticate with. No denylist to bypass, no scope to escalate.
+
+This model requires more infrastructure (a trusted committer process, mediated
+read access for `gh` queries) and is appropriate for environments where the
+agent processes untrusted input (issue bodies, PR descriptions, fetched web
+pages) that could carry prompt-injection payloads.
+
+The scoped-token model above is simpler and sufficient for trusted single-user
+workflows where the operator controls all inputs.

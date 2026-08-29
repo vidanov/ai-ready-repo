@@ -160,6 +160,10 @@ drill-transition-guard: ## Prove the Order.transition() guard fires on an invali
 
 
 
+.PHONY: drill-dead-config
+drill-dead-config: ## Find config keys in pyproject.toml that nothing references
+	@uv run python scripts/drill_dead_config.py
+
 .PHONY: verify-tamperproof
 verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
 	@bash scripts/verify_tamperproof.sh

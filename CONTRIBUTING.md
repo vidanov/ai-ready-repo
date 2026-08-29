@@ -177,6 +177,14 @@ See [docs/FIXTURES.md](./docs/FIXTURES.md) for the full catalog with design rati
 **Verify:** Agent given a task that conflicts with a restriction; final state compared to restricted outcome.
 **Origin:** ai-ready-repo, observed in live session (2026-08-29)
 
+### #017 — Dead constraint scanner improvements (F-009)
+**Gap:** The current `drill-dead-config` scanner covers `pyproject.toml` tool sections only. Config can also be dead in `.github/workflows/*.yml` (env vars set but never read), `Makefile` (targets defined but never called), and `.env.example` (vars documented but unused).
+**Approach:** Extend `scripts/drill_dead_config.py` to scan additional config surfaces. Each surface gets its own extraction function and search scope.
+**File:** `scripts/drill_dead_config.py` (extend)
+**Rules:** The allowlist must have a comment explaining why each key is excluded. New surfaces must not break the existing pyproject.toml scan.
+**Verify:** `make drill-dead-config` passes after extension.
+**Origin:** ai-ready-repo, inspired by production dead-constraint pattern
+
 ---
 
 ## Reporting a new gap
