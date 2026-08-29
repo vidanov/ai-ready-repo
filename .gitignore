@@ -11,3 +11,6 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Draft posts (operational, not content)
+docs/draft-post-*.json
