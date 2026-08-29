@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# Tamper-proof verification: run acceptance checks from a trusted copy
-# that the agent cannot modify.
+# Tamper-proof verification: run acceptance checks from a copy of the
+# verification files (Makefile, tests, scripts, ADRs), separate from
+# whatever copy an agent has open in an editor or is mid-edit on.
 #
 # Usage:
 #   make verify-tamperproof
 #
-# This copies verification infrastructure to a temp directory BEFORE the
-# agent's changes, then runs the checks from there against the working
-# source tree. If the agent weakened the Makefile, tests, or lint config,
-# the trusted copy still catches it.
+# LIMITATION: the copy is taken at run time, from the current working
+# tree — not from a prior commit or a pre-session snapshot. If the tests
+# or lint config were already weakened *before* this command runs, this
+# catches nothing; it only protects against tampering that happens
+# concurrently with, or attempted after, this specific invocation. Real
+# protection against a prior-committed weakening needs the trusted copy
+# sourced from git history (e.g. a pinned ref or the last commit on
+# main) instead of the live working tree — see CONTRIBUTING.md #030.
 #
 # See docs/FIXTURES.md F-003 for the design rationale.
 
