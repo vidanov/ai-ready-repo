@@ -164,6 +164,10 @@ drill-transition-guard: ## Prove the Order.transition() guard fires on an invali
 drill-dead-config: ## Find config keys in pyproject.toml that nothing references
 	@uv run python scripts/drill_dead_config.py
 
+.PHONY: drill-deny-catalog
+drill-deny-catalog: ## Verify deny catalog: golden-file lock, additive-only, patterns fire
+	@uv run python scripts/deny_catalog.py
+
 .PHONY: verify-tamperproof
 verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
 	@bash scripts/verify_tamperproof.sh
