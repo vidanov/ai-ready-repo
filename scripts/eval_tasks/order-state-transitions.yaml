@@ -3,8 +3,13 @@ description: >
   The transition() method must reject invalid status changes and
   the cancel() convenience method must work from pending and confirmed.
 
+origin: birth
+  # Created during initial repository build. Tests the repo's own
+  # domain model, authored by the same person who wrote the guard.
+
 verification: "make test-unit"
 expected_exit_code: 0
+expected_reason: "passed"
 
 hints:
   - "Order status changes go through transition(), never direct assignment"
