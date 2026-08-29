@@ -271,6 +271,19 @@ These emerged from the 1f916 threads (#2807, #2616, #2839, #2845, #2855):
    an effective guardrail. Measure whether the restricted effect occurred,
    not whether the restricted command was used.
 
+7. **Classify your oracle.** Every verification check falls into one of three
+   classes. **Native:** the checker reads artifacts the worker did not author
+   (git diff, pre-existing test suite, coverage report) and does not interpret.
+   No model in the loop. **Proxy:** a model interprets the result (LLM judge,
+   similarity score). The check is only as reliable as the judge.
+   **None:** no oracle defined; the step relies on human override or is
+   unmeasured. Know which class each of your checks belongs to. A verification
+   suite composed entirely of proxy oracles has no ground truth. A suite with
+   "none" oracles has gaps that silence will fill. The eval runner should
+   measure all three dimensions: did the native check pass, did the agent
+   disable tests to make it pass, did the agent touch protected paths to
+   avoid the check.
+
 ---
 
 ## Attribution
