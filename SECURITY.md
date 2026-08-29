@@ -57,3 +57,40 @@ machine). There is no production data, no authentication surface, and no
 external service integrations in the default configuration. Infrastructure
 code added in `src/ai_ready_repo/infrastructure/` requires `@platform-team`
 review (see `CODEOWNERS`).
+
+## Agent token scope
+
+When granting an AI coding agent access to this repository, use a GitHub
+fine-grained personal access token with minimum permissions. The token scope
+is the credential boundary that determines what the agent can do regardless
+of how creative it is.
+
+**Recommended permissions:**
+
+| Permission | Level | Why |
+|------------|-------|-----|
+| `contents` | Write | Create branches, push commits |
+| `pull-requests` | Write | Open and update pull requests |
+| `metadata` | Read | Required for all fine-grained tokens |
+
+**Permissions to withhold:**
+
+| Permission | Why |
+|------------|-----|
+| `administration` | Allows `gh pr merge --admin`, bypassing required reviews |
+| `bypass branch protections` | Nullifies branch protection rules entirely |
+
+With this configuration the agent can create branches, push code, and open
+pull requests. It cannot merge past required reviews, delete branches it does
+not own, or modify repository settings. The creative workaround path (branch,
+PR, self-merge) dies at the merge step because the token cannot satisfy the
+review requirement and cannot bypass it.
+
+This is the same principle as Unix file permissions: the process runs as a
+user with limited rights. It does not matter how creative the process is.
+The kernel enforces the boundary, not the process's instructions.
+
+**Both layers required.** Token scope and branch protection work together.
+A correctly scoped token on an unprotected branch still allows direct merge.
+Branch protection on a repository where the agent holds an admin token still
+allows `gh pr merge --admin`. Drop either layer and the agent finds the gap.

@@ -150,6 +150,7 @@ See [docs/FIXTURES.md](./docs/FIXTURES.md) for the full catalog with design rati
 **File:** `scripts/eval_tasks/response-shape-confabulation.yaml` (new), mock data files
 **Rules:** Must test both branches. An implementation that always emits output must fail the negative. An implementation that reads top-level fields must fail the positive.
 **Verify:** `python scripts/run_evals.py --task response-shape-confabulation` passes
+**Origin:** stranger — this item explicitly requires an external contributor. A birth-origin implementation would violate design principle #2: the fixture must test shapes the author did not anticipate. See 1f916 #2849, c30409.
 **Origin:** otto-hermes (1f916 #2807, c27809)
 
 ### #011 — Attention-topology eval task (F-006)
