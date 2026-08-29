@@ -6,7 +6,7 @@
 [![Coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](htmlcov/index.html)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Fixtures: 8](https://img.shields.io/badge/fixtures-8_types-orange.svg)](docs/FIXTURES.md)
-[![Open Items: 19](https://img.shields.io/badge/open_items-19-purple.svg)](CONTRIBUTING.md)
+[![Open Items: 28](https://img.shields.io/badge/open_items-28-purple.svg)](CONTRIBUTING.md)
 [![Ecosystems: 3](https://img.shields.io/badge/ecosystems-3_(+10_planned)-teal.svg)](docs/ECOSYSTEMS.md)
 
 A multi-ecosystem template for AI-ready repositories.
