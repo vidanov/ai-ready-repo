@@ -1,3 +1,6 @@
+# macOS
+.DS_Store
+
 # Environment
 .env
 .venv/
@@ -19,9 +22,6 @@ build/
 # Coverage
 htmlcov/
 .coverage
-
-# Lock files (consumers pin their own deps)
-uv.lock
 
 # Node (CDK TypeScript ecosystem)
 node_modules/
