@@ -22,9 +22,14 @@ Usage:
     python scripts/adopt.py /path/to/repo --detect     # detect stack only
 """
 
+from __future__ import annotations
+
 import argparse
 import sys
 from pathlib import Path
+
+if sys.version_info < (3, 9):
+    sys.exit("adopt.py requires Python 3.9 or newer (found %s)" % sys.version.split()[0])
 
 # ponytail: detection by file presence, fine for common stacks;
 # replace with a plugin registry if this grows beyond 10 stacks

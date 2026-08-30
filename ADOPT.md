@@ -34,6 +34,24 @@ python ai_readiness_audit.py
 The audit checks 20 items across the maturity levels and prints a score with
 specific gaps. Start with whatever it flags as missing at your current level.
 
+### Or generate a scaffold automatically
+
+`scripts/adopt.py` detects your stack (Python, Node/TypeScript, etc.) and
+generates a starting `Makefile`, `AGENTS.md`, `SECURITY.md`, and ADR template
+in one pass:
+
+```bash
+curl -O https://raw.githubusercontent.com/vidanov/ai-ready-repo/main/scripts/adopt.py
+python3 adopt.py /path/to/your/repo --dry-run   # preview what would be created
+python3 adopt.py /path/to/your/repo             # write the files
+```
+
+Generated files are a starting point, not a trusted output — review every
+line, run `make verify`, and fix what fails before committing. It only fills
+in files that don't already exist and never overwrites. Use it to skip ahead,
+then come back to the manual steps below for anything it couldn't generate
+(import boundaries, drills, eval tasks).
+
 ---
 
 ## Step 1: Pin your toolchain

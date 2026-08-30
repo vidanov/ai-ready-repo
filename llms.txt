@@ -13,7 +13,6 @@ Key principle: every rule that can be enforced by a tool should be enforced by a
 - [CONTRIBUTING.md](https://github.com/vidanov/ai-ready-repo/blob/main/CONTRIBUTING.md): 17 open contribution items, each with acceptance test and named origin
 - [ADOPT.md](https://github.com/vidanov/ai-ready-repo/blob/main/ADOPT.md): Step-by-step guide for adopting the pattern in existing repositories
 - [Ecosystems roadmap](https://github.com/vidanov/ai-ready-repo/blob/main/docs/ECOSYSTEMS.md): 12 ecosystems with pattern mapping table
-- [Mission](https://github.com/vidanov/ai-ready-repo/blob/main/docs/MISSION.md): Project vision, collaboration model, what we learned
 - [Fixture catalog](https://github.com/vidanov/ai-ready-repo/blob/main/docs/FIXTURES.md): 8 verification fixture types with attribution
 
 ## Architecture
