@@ -9,39 +9,61 @@
 [![Open Items: 28](https://img.shields.io/badge/open_items-28-purple.svg)](CONTRIBUTING.md)
 [![Ecosystems: 3](https://img.shields.io/badge/ecosystems-3_(+10_planned)-teal.svg)](docs/ECOSYSTEMS.md)
 
-A multi-ecosystem template for AI-ready repositories.
+Make your AI coding agents faster, cheaper, and more reliable.
 
-Most repositories that use coding agents add a longer `AGENTS.md` when the agent behaves poorly. This template takes the opposite approach: move the rules into executable structure so there is less to explain.
+An agent working in a well-structured repo completes tasks in one pass instead
+of three. It never wastes tokens guessing how to run tests, what the
+architecture is, or which imports are allowed. Every answer is in the toolchain,
+not in a prose file the model might misread.
+
+This template is the structure. Clone it, adopt it into an existing repo, or
+use it as a reference for what "AI-ready" looks like in practice.
 
 → Read the accompanying article: [How to Make a Repository AI-Ready](https://dev.to/aws-builders/how-to-make-a-repository-ai-ready-3j62)
 
 ---
 
+## Why this matters (the cost argument)
+
+| Without structure | With structure |
+|---|---|
+| Agent asks "how do I run tests?" — 3 retries, 3× tokens | `make verify` — one command, first try |
+| Agent puts DB code in the domain layer — review rework | Import boundary rejects it before the PR opens |
+| Agent weakens a test to make it pass — silent regression | `make verify-tamperproof` catches it from a trusted copy |
+| Agent discovers constraints by failing — trial-and-error loops | `AGENTS.md` + visible rules — works within them on first try |
+| New agent or new human — hours of tribal knowledge transfer | `make bootstrap && make verify` — productive in 60 seconds |
+
+At $3-15 per million tokens, a repo that needs 3 agent cycles instead of 1 is
+3× more expensive. The structure pays for itself on the first task.
+
+---
+
 ## What this template gives you
 
-| Layer | What is included |
+**Productivity (the agent works faster):**
+
+| Layer | What it does |
 |---|---|
-| **Pinned toolchain** | `.python-version`, `pyproject.toml` with locked dev deps |
-| **One bootstrap command** | `make bootstrap` — fresh clone to working state |
-| **Task interface** | `Makefile` with named targets: `verify`, `test`, `lint`, `typecheck` |
-| **Formatter** | ruff format — deterministic, no style debates |
-| **Linter** | ruff — security checks, import order, bug patterns |
-| **Type checker** | mypy strict — converts assumptions into contracts |
-| **Import boundaries** | import-linter — domain/application/infrastructure contracts enforced by CI |
-| **Unit tests** | pytest with 100% coverage threshold |
-| **ADR validation** | `scripts/validate_adrs.py` — every ADR must have id, status, scope, Verification, and Retirement |
+| **One bootstrap command** | `make bootstrap` — fresh clone to working state in seconds |
+| **Task interface** | `Makefile` with named targets: `verify`, `test`, `lint`, `typecheck` — no guessing |
+| **Pinned toolchain** | `.python-version`, `pyproject.toml` with locked deps — no version drift |
+| **Import boundaries** | import-linter contracts — the agent knows which imports are legal without asking |
+| **ADRs with retirement** | Every constraint explains why it exists and when to remove it — no fear of dead rules |
+| **Tool bridges** | `make setup-tools` — one command wires AGENTS.md into Cursor, Copilot, Claude, Kiro, Aider, Gemini, Windsurf |
+| **Multi-ecosystem** | Python, CDK TypeScript, Terraform — same patterns, native tools |
+| **Adopt existing repos** | `python scripts/adopt.py /path/to/repo` — detects your stack, generates the scaffold |
+
+**Safety (the agent can't break things silently):**
+
+| Layer | What it does |
+|---|---|
+| **Formatter + linter + typecheck** | ruff, mypy strict — deterministic, no style debates |
 | **Verification drills** | `make drill-*` — proves each gate can actually reject a violation |
-| **Tamper-proof verification** | `make verify-tamperproof` — runs checks from a trusted copy agents can't weaken |
-| **Fixture catalog** | 8 fixture types documented in `docs/FIXTURES.md`, community-attributed |
+| **Tamper-proof verification** | `make verify-tamperproof` — runs checks from a trusted copy |
+| **Fixture catalog** | 14 known failure classes in `docs/FAILURE-CATALOG.md`, 8 implemented with drills |
 | **Agent eval tasks** | `scripts/eval_tasks/` with baseline tracking and 5% regression gate |
-| **Daily eval workflow** | `.github/workflows/eval-daily.yml` — runs representative tasks on a schedule |
-| **Fresh-clone CI** | `.github/workflows/fresh-clone.yml` — daily check that bootstrap works from zero |
-| **Security scanning** | `.github/workflows/security.yml` — dependency review + gitleaks |
-| **CODEOWNERS** | Routes CI, ADR, and infrastructure changes to reviewers |
-| **Multi-ecosystem** | CDK TypeScript, Terraform scaffolds + 10 more planned in `docs/ECOSYSTEMS.md` |
-| **AI discovery** | `llms.txt` — LLM-friendly project summary following the [llmstxt.org](https://llmstxt.org) standard |
-| **Per-path scoped rules** | `.cursor/rules/*.mdc` — path-scoped instructions for Cursor (Python, tests, CDK, Terraform, docs) |
-| **Reusable audit action** | `.github/actions/ai-readiness-audit/` — run the 20-item audit on any repo via GitHub Actions |
+| **CODEOWNERS** | Routes sensitive paths to reviewers |
+| **Security scanning** | Dependency review + gitleaks in CI |
 | **AGENTS.md** | Minimal — only what cannot be inferred from running the tools |
 
 ---
@@ -304,6 +326,10 @@ Patterns and observations discovered while working here are collected in [LEARNI
 
 ## The principle
 
-Every rule that can be enforced by a tool should be enforced by a tool. `AGENTS.md` documents only what the tools cannot check: non-obvious behaviour, operational context, and intentional constraints that look like bugs.
+Structure makes agents productive. Enforcement keeps them safe. The two
+compound: an agent that knows the rules works within them on the first try,
+which is faster and cheaper than an agent that discovers rules by breaking them.
 
-The repository should be able to determine whether a patch belongs — not the instruction file.
+Every rule that can be enforced by a tool should be enforced by a tool.
+`AGENTS.md` documents only what the tools cannot check. The repository should
+be able to determine whether a patch belongs — not the instruction file.
