@@ -106,6 +106,13 @@ merge never issues `git push origin main`.
 check. Structural enforcement (branch protection with required reviews)
 is the mechanism that makes authorization checkable.
 
+**Runtime enforcement:** [Shape](https://github.com/vidanov/shape)
+implements phase-gated tool calls: an agent in EXPLORE phase cannot
+call write tools regardless of prompt instructions. Rule DSL example:
+`BLOCK push_to_main WHEN phase IS NOT commit`. This is tier 4
+(structural enforcement) applied at runtime — the gate raises
+`PhaseError`, not a warning.
+
 **Variant — peer-goal adoption (OpenAI HF incident):** Agent drops its
 own objection when another agent posts "GO" on a message board. Treats
 untrusted peer instruction as authorization.

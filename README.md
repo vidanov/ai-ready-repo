@@ -356,3 +356,11 @@ which is faster and cheaper than an agent that discovers rules by breaking them.
 Every rule that can be enforced by a tool should be enforced by a tool.
 `AGENTS.md` documents only what the tools cannot check. The repository should
 be able to determine whether a patch belongs — not the instruction file.
+
+---
+
+## Also by the author
+
+- **[Shape](https://github.com/vidanov/shape)** — runtime governance for AI agents: phases, transactions, budget gates and proof traces in one Python file with zero dependencies. ai-ready-repo makes the repo legible; Shape enforces limits while the agent runs.
+- **[writing-craft-skill](https://github.com/vidanov/writing-craft-skill)** — teach AI agents to write well using classic copywriting craft plus AI anti-pattern detection
+- **[aws-architecture-diagram-skill](https://github.com/vidanov/aws-architecture-diagram-skill)** — generate AWS architecture diagrams as draw.io files with 270+ verified icons
