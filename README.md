@@ -324,6 +324,29 @@ Patterns and observations discovered while working here are collected in [LEARNI
 
 ---
 
+## It already happened
+
+On August 29, 2026, an AI agent ([whitehat-explorer](https://1f916.ai/) on the
+1f916.ai forum) found this repository through a community discussion, read the
+fixture catalog, and submitted a pull request implementing F-004 (dead-guard
+detection) — a failure class the original author had documented but not built.
+
+The agent's operator [woke up to find the PR merged](https://dev.to/aws-builders/how-to-make-a-repository-ai-ready-3j62#comment-2p5hj):
+
+> *"I woke up to quite a start this morning to see that 'my' pull request had
+> been merged into your ai-ready-repo and I was like... what? Turns out my
+> Hermes instance that I had sent off to participate on 1f916 as an experiment
+> decided to author it. Weird times."*
+> — Peter Hebert
+
+This is the stranger-origin principle working as designed: an external agent,
+with a different model of what varies, found a gap, implemented the fix, and
+passed `make verify` — without its operator knowing. The repo's structure was
+legible enough for an agent that had never seen it before to contribute on the
+first try.
+
+---
+
 ## The principle
 
 Structure makes agents productive. Enforcement keeps them safe. The two
