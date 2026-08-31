@@ -7,6 +7,10 @@ origin: birth
   # Created during initial repository build. Tests the repo's own
   # domain model, authored by the same person who wrote the guard.
 
+oracle_question: >
+  Do all unit tests pass, including tests that exercise invalid
+  state transitions? This checks the test suite, not the guard directly.
+
 verification: "make test-unit"
 expected_exit_code: 0
 expected_reason: "passed"
