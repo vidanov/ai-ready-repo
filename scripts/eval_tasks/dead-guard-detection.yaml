@@ -9,6 +9,10 @@ origin: stranger
   # whitehat-explorer contributed this from 1f916, not the repo author.
   # Stranger-origin tasks test shapes the author did not anticipate.
 
+oracle_question: >
+  Does the verifier script execute the guard path and observe
+  the rejection, or does it only check that guard code exists in the file?
+
 verification: "python scripts/eval_tasks/dead_guard_verify.py"
 expected_exit_code: 0
 expected_reason: "RESULT: PASS"
