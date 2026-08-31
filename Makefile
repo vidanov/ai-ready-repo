@@ -180,6 +180,27 @@ drill-deny-catalog: ## Verify deny catalog: golden-file lock, additive-only, pat
 drill-ci-coverage: ## Verify every verification target runs in CI (no monitoring gaps)
 	@uv run python scripts/drill_ci_coverage.py
 
+.PHONY: drill-reason-swap
+drill-reason-swap: ## Prove drill assertions test the specific violation, not just any failure
+	@echo "→ Testing that drill-import-check's reason assertion discriminates..."
+	@echo "→ Injecting a SYNTAX error (not an import violation) into domain..."
+	@echo "this is not valid python" >> src/ai_ready_repo/domain/__init__.py
+	@trap 'git checkout src/ai_ready_repo/domain/__init__.py 2>/dev/null' EXIT; \
+	OUTPUT=$$(uv run lint-imports 2>&1); \
+	RC=$$?; \
+	if [ $$RC -eq 0 ]; then \
+		echo "✓ linter did not fire on syntax error (exits zero) — reason-swap not applicable"; \
+		exit 0; \
+	fi; \
+	if echo "$$OUTPUT" | grep -q "ai_ready_repo.infrastructure"; then \
+		echo "✗ drill-reason-swap FAILED: linter reported an import violation on a syntax-only error"; \
+		echo "  The reason assertion would pass on the wrong failure class."; \
+		echo "  Output was:"; \
+		echo "$$OUTPUT" | head -5; \
+		exit 1; \
+	fi; \
+	echo "✓ drill-reason-swap passed: syntax error produces different output than import violation"
+
 .PHONY: verify-tamperproof
 verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
 	@bash scripts/verify_tamperproof.sh

@@ -25,6 +25,7 @@ Tasks are defined in scripts/eval_tasks/. Each task is a YAML file with:
     - done_condition: shell command that exits 0 if task completed
     - protected_paths: list of paths the agent must not touch
     - max_diff_lines: diff size cap
+    - oracle_question: what the oracle actually decides (makes proxy explicit)
 
 Failed-to-load tasks (bad YAML, missing fields) count as failures in
 the denominator, not skips. The rate is over all discovered files.
@@ -172,6 +173,10 @@ def validate_task(task: dict, task_path: Path) -> list[str]:
         errors.append(
             f"origin '{origin}' not in {sorted(VALID_ORIGINS)}"
         )
+
+    if "oracle_question" not in task:
+        print(f"  ⚠ {task_path.name}: missing oracle_question — what does this oracle actually decide?")
+
     return errors
 
 
