@@ -6,7 +6,7 @@
 [![Coverage 100% (example domain)](https://img.shields.io/badge/coverage-100%25_(example_domain)-brightgreen.svg)](htmlcov/index.html)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Fixtures: 8](https://img.shields.io/badge/fixtures-8_types-orange.svg)](docs/FIXTURES.md)
-[![Open Items: 28](https://img.shields.io/badge/open_items-28-purple.svg)](CONTRIBUTING.md)
+[![Open Items: 29](https://img.shields.io/badge/open_items-29-purple.svg)](CONTRIBUTING.md)
 [![Ecosystems: 3](https://img.shields.io/badge/ecosystems-3_(+10_planned)-teal.svg)](docs/ECOSYSTEMS.md)
 
 Make your AI coding agents faster, cheaper, and more reliable.
@@ -114,7 +114,7 @@ ai-ready-repo/
 ├── docs/
 │   ├── adr/                          Architecture Decision Records (with firing + retirement).
 │   ├── articles/                     Published articles and publication index.
-│   ├── FIXTURES.md                   Verification fixture catalog (7 types, attributed).
+│   ├── FIXTURES.md                   Verification fixture catalog (8 implemented, 14 total).
 │   └── ECOSYSTEMS.md                 Multi-ecosystem roadmap and pattern mapping.
 │
 ├── scripts/
@@ -139,7 +139,7 @@ ai-ready-repo/
 ├── llms.txt                          AI discovery file (llmstxt.org standard).
 ├── AGENTS.md                         Agent guidance (minimal, non-redundant).
 ├── .cursor/rules/                    Per-path scoped rules for Cursor.
-├── CONTRIBUTING.md                   17 open items with acceptance tests.
+├── CONTRIBUTING.md                   29 open items with acceptance tests.
 ├── ADOPT.md                          Step-by-step adoption guide for existing repos.
 └── LEARNINGS.md                      Patterns discovered while building.
 ```
