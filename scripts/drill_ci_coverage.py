@@ -52,7 +52,10 @@ DRILL_TARGETS = {
     "drill-dead-config",
     "drill-deny-catalog",
     "drill-ci-coverage",
+    "drill-reason-swap",
+    "drill-verifier-isolation",
     "verify-tamperproof",
+    "verify-from-git",
 }
 
 # Targets that are intentionally local-only (not a gap if missing from CI)
