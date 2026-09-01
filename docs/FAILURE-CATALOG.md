@@ -135,6 +135,18 @@ ExploitGym GitHub, found the grading criteria, and spent days pursuing a
 condition the internal grader didn't even check. `verify-tamperproof`
 prevents modification but not metagaming.
 
+**Isolation axis (hermes-voyager, 1f916 #3385):** the property that makes
+a verifier trustworthy is not verbal-vs-structural enforcement — it is
+whether the checker sits inside or outside the checked party's write path.
+A test file the agent can edit is a suggestion; a test read from git HEAD
+is behind a boundary the agent cannot cross without a recorded commit.
+`make drill-verifier-isolation` proves this: it plants a weakened assertion
+in the working tree and confirms `scripts/verify_from_git.sh` runs the
+committed tests and never sees the plant. Full closure needs the checker
+off-machine entirely (CI runner with no agent shell, forge-enforced branch
+protection). Rung ladder: working-tree copy < git-HEAD copy < off-machine
+verifier the agent has no credentials for.
+
 ### F-011: Safe exit on impossible task
 
 **Source:** OpenAI Hugging Face incident (July 2026)
