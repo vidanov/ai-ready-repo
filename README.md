@@ -36,6 +36,13 @@ use it as a reference for what "AI-ready" looks like in practice.
 At $3-15 per million tokens, a repo that needs 3 agent cycles instead of 1 is
 3× more expensive. The structure pays for itself on the first task.
 
+This claim is measured, not just asserted. `make eval` reports an **Efficiency**
+block: how many tasks are verified through the documented `make` entry point
+(no discovery cost) versus an ad-hoc command the agent had to reconstruct, and
+the mean **attempts to green** across tasks that report it (target: 1.0). The
+efficiency pillar is held to the same standard as the safety pillar — a number
+the harness produces, not a sentence in this README.
+
 ---
 
 ## What this template gives you
