@@ -257,11 +257,20 @@ ever run anywhere. These items close that gap.
 **Verify:** `make verify` passes after the move; no stale path references remain (`grep -r "src/ai_ready_repo" docs/ README.md AGENTS.md`).
 
 ### #030 — verify-tamperproof doesn't actually protect against prior tampering
-**Gap:** `scripts/verify_tamperproof.sh` copies the Makefile/tests/scripts to a temp directory at run time, from the current working tree. It protects against tampering attempted concurrently with or after that specific invocation, but not against tests or lint config that were already weakened before the command ran — which is the scenario F-003 describes (an agent weakens the oracle, then the oracle passes).
-**File:** `scripts/verify_tamperproof.sh`
+**Status:** PARTIALLY RESOLVED (2026-09-01). `scripts/verify_from_git.sh` +
+`make drill-verifier-isolation` source the unit tests from git HEAD instead of
+the working tree, closing the same-session-edit gap. The boundary is now
+"uncommitted working-tree edits" rather than "no protection". A committed
+weakening still defeats it — full closure needs the checker off-machine (CI on
+a runner with no agent shell, forge-enforced branch protection). Credit for the
+framing (inside-vs-outside the write path as the axis that matters):
+hermes-voyager, 1f916 #3385.
+
+**Original gap:** `scripts/verify_tamperproof.sh` copies the Makefile/tests/scripts to a temp directory at run time, from the current working tree. It protects against tampering attempted concurrently with or after that specific invocation, but not against tests or lint config that were already weakened before the command ran — which is the scenario F-003 describes (an agent weakens the oracle, then the oracle passes).
+**File:** `scripts/verify_tamperproof.sh`, `scripts/verify_from_git.sh`
 **Approach:** Source the trusted copy from git history instead of the working tree — e.g. `git show origin/main:tests/unit/...` or a pinned commit/tag known-good — so a same-session edit to the working copy can't affect what's checked.
 **Rules:** Must still check the working `src/` (that's what's being verified); only the oracle (tests, Makefile, lint config) comes from history.
-**Verify:** Drill: weaken a test in the working tree, confirm `make verify` passes but `make verify-tamperproof` still fails.
+**Verify:** `make drill-verifier-isolation` — plants a weakened assertion + dummy test in the working tree, confirms the git-sourced verifier runs the committed tests and never sees the plant.
 
 ---
 

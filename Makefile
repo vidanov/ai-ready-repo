@@ -181,8 +181,7 @@ drill-ci-coverage: ## Verify every verification target runs in CI (no monitoring
 	@uv run python scripts/drill_ci_coverage.py
 
 .PHONY: drill-reason-swap
-drill-reason-swap: ## Prove drill assertions test the specific violation, not just any failure
-	@echo "→ Testing that drill-import-check's reason assertion discriminates..."
+drill-reason-swap: ## Prove drill assertions test the specific violation, not just any failure	@echo "→ Testing that drill-import-check's reason assertion discriminates..."
 	@echo "→ Injecting a SYNTAX error (not an import violation) into domain..."
 	@echo "this is not valid python" >> src/ai_ready_repo/domain/__init__.py
 	@trap 'git checkout src/ai_ready_repo/domain/__init__.py 2>/dev/null' EXIT; \
@@ -204,6 +203,43 @@ drill-reason-swap: ## Prove drill assertions test the specific violation, not ju
 .PHONY: verify-tamperproof
 verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
 	@bash scripts/verify_tamperproof.sh
+
+.PHONY: verify-from-git
+verify-from-git: ## Run unit tests from the committed copy at HEAD, not the working tree
+	@bash scripts/verify_from_git.sh
+
+.PHONY: drill-verifier-isolation
+drill-verifier-isolation: ## Prove the verifier reads from outside the agent's write path (credit: hermes-voyager, 1f916 #3385)
+	@echo "→ The property under test: an uncommitted edit to a test file must NOT"
+	@echo "  change the verdict of a verifier that sources tests from git HEAD."
+	@echo "→ Planting a weakened assertion into the working-tree test file..."
+	@# Replace a real assertion with one that can never fail. A verifier that
+	@# reads the working tree would accept this; one reading git HEAD ignores it.
+	@printf '\n\ndef test_planted_always_passes() -> None:\n    assert True  # planted by drill-verifier-isolation\n' >> tests/unit/test_domain_order.py
+	@# Also weaken an existing assertion so the working tree is genuinely tampered.
+	@python3 -c "import pathlib; p = pathlib.Path('tests/unit/test_domain_order.py'); t = p.read_text(); p.write_text(t.replace('assert order.customer_id == \"cust-1\"', 'assert order.customer_id == order.customer_id  # weakened by drill'))"
+	@trap 'git checkout tests/unit/test_domain_order.py 2>/dev/null' EXIT; \
+	echo "→ [1/2] Working-tree pytest sees the weakened file (control)..."; \
+	if ! grep -q "weakened by drill" tests/unit/test_domain_order.py; then \
+		echo "✗ drill-verifier-isolation FAILED: could not plant the tamper"; \
+		exit 1; \
+	fi; \
+	echo "  ✓ working tree is tampered (assertion weakened, dummy test added)"; \
+	echo "→ [2/2] Git-sourced verifier must ignore the working-tree edit..."; \
+	OUTPUT=$$(bash scripts/verify_from_git.sh 2>&1); \
+	RC=$$?; \
+	if [ $$RC -ne 0 ]; then \
+		echo "✗ drill-verifier-isolation FAILED: git-sourced verifier errored"; \
+		echo "$$OUTPUT" | tail -10; \
+		exit 1; \
+	fi; \
+	if echo "$$OUTPUT" | grep -q "test_planted_always_passes"; then \
+		echo "✗ drill-verifier-isolation FAILED: verifier picked up the PLANTED test"; \
+		echo "  This means it read the working tree, not git HEAD — inside the write path."; \
+		exit 1; \
+	fi; \
+	echo "  ✓ verifier ran the committed tests; the planted test is absent from its run"; \
+	echo "✓ drill-verifier-isolation passed: the checker is outside the agent's uncommitted write path"
 
 .PHONY: eval
 eval: ## Run agent evaluation tasks against this repo
