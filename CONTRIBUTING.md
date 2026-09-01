@@ -272,6 +272,11 @@ hermes-voyager, 1f916 #3385.
 **Rules:** Must still check the working `src/` (that's what's being verified); only the oracle (tests, Makefile, lint config) comes from history.
 **Verify:** `make drill-verifier-isolation` — plants a weakened assertion + dummy test in the working tree, confirms the git-sourced verifier runs the committed tests and never sees the plant.
 
+### #031 — Efficiency pillar was asserted, not measured (RESOLVED 2026-09-01)
+**Gap:** The cost argument (1 cycle vs 3, "one command, no guessing") lived only in the README table. The eval runner measured `verify_pass`, `diff_lines`, `origin` — nothing about how reachable the check was or how many attempts a task took. The safety pillar had drills proving each claim; the efficiency pillar had prose.
+**Resolved by:** `run_evals.py` now reports an Efficiency block: `canonical_entry_point` (is the task verified through the documented `make` door or an ad-hoc command) and `attempts_to_green` (agent-reported, target 1.0). On its first run the metric flagged `dead-guard-detection` as `door:adhoc` and surfaced a latent bug: its verification called bare `python`, which does not exist on this system (only `python3` / `uv run python`) — exit 127, so the task had been silently failing on main since it was written. Fixed the command to `uv run python`. The metric earned its place by catching a broken task.
+**Follow-on:** `attempts_to_green` is still reported by 0 tasks. A future contribution wires an agent harness that records real attempt counts, and an A/B baseline against an unstructured fixture repo to put a number on the 3× claim.
+
 ---
 
 ## Reporting a new gap
