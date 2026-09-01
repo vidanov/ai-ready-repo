@@ -26,6 +26,11 @@ Tasks are defined in scripts/eval_tasks/. Each task is a YAML file with:
     - protected_paths: list of paths the agent must not touch
     - max_diff_lines: diff size cap
     - oracle_question: what the oracle actually decides (makes proxy explicit)
+    - attempts_to_green: agent-reported count of verify runs before the task
+        passed. This is the efficiency pillar's core metric — a structured
+        repo should drive it toward 1. Self-reported by the agent/harness that
+        ran the task; the runner cannot observe it after the fact. Omitted =
+        not measured (reported as "?"), never assumed to be 1.
 
 Failed-to-load tasks (bad YAML, missing fields) count as failures in
 the denominator, not skips. The rate is over all discovered files.
@@ -143,6 +148,21 @@ def count_tests_disabled_in_diff() -> int:
             if SKIP_RE.search(line):
                 count += 1
     return count
+
+
+def uses_canonical_entry_point(verification: str) -> bool:
+    """True if the verification command is the repo's documented interface.
+
+    The efficiency pillar rests on "one command, no guessing". A task whose
+    verification is `make verify` (or any `make <target>`) uses the entry point
+    the Makefile and AGENTS.md advertise, so an agent never has to discover how
+    to run it. A raw `pytest ...`, `python foo.py`, or bespoke shell pipeline is
+    something the agent had to reconstruct — the token cost the cost table names.
+
+    This is a proxy, not a token meter: it measures whether the check is reached
+    through the documented door, not how many tokens the agent spent.
+    """
+    return verification.strip().startswith("make ")
 
 
 def check_protected_paths(changed_files: list[str]) -> list[str]:
@@ -316,6 +336,8 @@ def run_task(task_path: Path) -> dict[str, object]:
         "changed_files": changed_files,
         "elapsed": round(elapsed, 2),
         "origin": task.get("origin", "unknown"),
+        "attempts_to_green": task.get("attempts_to_green"),
+        "canonical_entry_point": uses_canonical_entry_point(task["verification"]),
         "stdout": result.stdout[:500],
         "stderr": result.stderr[:500],
     }
@@ -373,7 +395,41 @@ def main() -> int:
             flags.append(f"diff:{r['diff_lines']}")
         flag_str = f" [{', '.join(flags)}]" if flags else ""
         origin_str = f" ({r.get('origin', '?')})" if r.get("origin") else ""
-        print(f"  {icon} {r['task']} ({r['elapsed']}s){flag_str}{origin_str}")
+        atg = r.get("attempts_to_green")
+        atg_str = f" attempts:{atg}" if atg is not None else " attempts:?"
+        door = "door:make" if r.get("canonical_entry_point") else "door:adhoc"
+        print(
+            f"  {icon} {r['task']} ({r['elapsed']}s){flag_str}{origin_str}"
+            f" [{door}{atg_str}]"
+        )
+
+    # ── Efficiency pillar summary ────────────────────────────────────────
+    # The safety pillar is proven by drills. The efficiency pillar is measured
+    # here: how reachable the check is, and how many tries the agent needed.
+    loaded = [r for r in results if not r.get("load_error")]
+    if loaded:
+        canonical = sum(1 for r in loaded if r.get("canonical_entry_point"))
+        measured_atg = [
+            r["attempts_to_green"]
+            for r in loaded
+            if r.get("attempts_to_green") is not None
+        ]
+        print("\nEfficiency:")
+        print(
+            f"  entry point: {canonical}/{len(loaded)} tasks verified via "
+            f"`make` (the documented door, no discovery cost)"
+        )
+        if measured_atg:
+            avg = sum(measured_atg) / len(measured_atg)
+            print(
+                f"  attempts to green: {len(measured_atg)}/{len(loaded)} "
+                f"reported, mean {avg:.1f} (target 1.0)"
+            )
+        else:
+            print(
+                "  attempts to green: 0 tasks reported — add "
+                "`attempts_to_green` to tasks to measure the cost claim"
+            )
 
     baseline = load_baseline()
     prior_rate = baseline.get("success_rate", 0.0)
