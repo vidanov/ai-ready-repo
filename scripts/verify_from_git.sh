@@ -44,6 +44,20 @@ git ls-tree -r --name-only "$REF" -- tests/unit \
       git show "$REF:$f" > "$dest"
     done
 
+# Some tests resolve their target module relative to their own file path
+# (e.g. test_run_evals.py does `Path(__file__).parent.parent.parent /
+# "scripts"`, expecting a sibling scripts/ next to tests/), and some read
+# non-.py fixture data from under scripts/ (e.g. eval_tasks/fixtures/*.json).
+# Extract everything tracked under scripts/, not just .py, so both resolve
+# against the git-sourced copy instead of a missing or partial dir.
+mkdir -p "$TRUSTED_DIR/scripts"
+git ls-tree -r --name-only "$REF" -- scripts \
+  | while read -r f; do
+      dest="$TRUSTED_DIR/$f"
+      mkdir -p "$(dirname "$dest")"
+      git show "$REF:$f" > "$dest"
+    done
+
 echo "→ Trusted tests extracted from $REF at $TRUSTED_DIR"
 echo "→ Running unit tests from the committed copy against working src/..."
 
