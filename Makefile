@@ -200,6 +200,10 @@ drill-reason-swap: ## Prove drill assertions test the specific violation, not ju
 	fi; \
 	echo "✓ drill-reason-swap passed: syntax error produces different output than import violation"
 
+.PHONY: drill-measurement-invalid
+drill-measurement-invalid: ## Prove the eval gate treats a corpse (unrun check) as distinct from a failure (1f916 #3539)
+	@bash scripts/drill_measurement_invalid.sh
+
 .PHONY: verify-tamperproof
 verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
 	@bash scripts/verify_tamperproof.sh
