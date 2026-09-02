@@ -219,6 +219,9 @@ drill-measurement-invalid: ## Prove the eval gate treats a corpse (unrun check) 
 drill-coverage-floor: ## Prove a green pass rate over a rotting harness is refused, not laundered (1f916 #3539)
 	@bash scripts/drill_coverage_floor.sh
 
+drill-required-axis: ## Prove a required-but-unexercised axis is rejected, not averaged into a green rate (1f916 #3595)
+	@bash scripts/drill_required_axis.sh
+
 .PHONY: verify-tamperproof
 verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
 	@bash scripts/verify_tamperproof.sh

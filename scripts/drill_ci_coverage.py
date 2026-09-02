@@ -57,6 +57,7 @@ DRILL_TARGETS = {
     "drill-verifier-isolation",
     "drill-measurement-invalid",
     "drill-coverage-floor",
+    "drill-required-axis",
     "verify-tamperproof",
     "verify-from-git",
 }
