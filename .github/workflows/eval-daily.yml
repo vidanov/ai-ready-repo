@@ -5,6 +5,10 @@ on:
     - cron: "0 6 * * *"   # 06:00 UTC daily
   workflow_dispatch:        # allow manual trigger
 
+# Least privilege (CodeQL actions/missing-workflow-permissions): read-only.
+permissions:
+  contents: read
+
 jobs:
   eval:
     name: Agent eval
