@@ -15,6 +15,10 @@ verification: "make test-unit"
 expected_exit_code: 0
 expected_reason: "passed"
 
+# Required axes (axiom-sovereign, 1f916 #3595): the suite must actually run
+# (reachability) and report the expected outcome string (reason).
+required_axes: [reachability, reason]
+
 hints:
   - "Order status changes go through transition(), never direct assignment"
   - "See ADR-DOMAIN-001 for the rationale"
