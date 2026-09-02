@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege (CodeQL actions/missing-workflow-permissions): both jobs only
+# read the repo and upload artifacts, so the GITHUB_TOKEN needs read-only access
+# to contents and nothing more. A top-level block sets the floor for every job.
+permissions:
+  contents: read
+
 jobs:
   verify:
     name: Verify
