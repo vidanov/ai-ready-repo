@@ -83,7 +83,7 @@ verify: format-check lint typecheck import-check test-unit validate-adrs ## Run 
 	@echo "✓ All checks passed"
 
 .PHONY: verify-fast
-verify-fast: format-check lint typecheck ## Fast verification (no tests)
+verify-fast: format-check lint typecheck import-check ## Fast verification (no tests)
 	@echo "✓ Fast checks passed"
 
 # ── ADR validation ───────────────────────────────────────────────────────────
