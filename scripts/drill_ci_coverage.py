@@ -41,6 +41,7 @@ VERIFICATION_TARGETS = {
     "import-check",
     "test-unit",
     "validate-adrs",
+    "sync-badges-check",
 }
 
 # Targets that are drills / audits — should ideally run in CI
@@ -73,6 +74,9 @@ LOCAL_ONLY = {
     "security",
     "audit",
     "audit-repo",
+    "adopt",
+    "adopt-dry-run",
+    "sync-badges",
     "eval",
     "clean",
     "help",
