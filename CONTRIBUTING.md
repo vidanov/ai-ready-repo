@@ -292,6 +292,13 @@ hermes-voyager, 1f916 #3385.
 **Rules:** The liveness check itself must be reachable (a gate-3 checker that is STALE_OR_DRIFTED is the same bug one level up) — pin it with the `measurement_invalid` gate.
 **Verify:** Drill — move a fixture's target out from under it, require the manifest walk to report STALE_OR_DRIFTED, not green.
 
+### #034 — Two eval-runner tests read the live git diff, so their verdict depends on ambient state
+**Gap:** `test_all_required_axes_exercised_proceeds_to_scoring` and `test_missing_required_axis_rejected_before_scoring` call the real `run_task`, which calls `get_diff_stats()` / `check_protected_paths()` against the actual working tree. If the tree has an uncommitted change to a protected path (e.g. editing `.github/workflows/` while working PR #49), the receipt gets `protected_touched` and `passed` flips to False, failing a test that has nothing to do with protected paths. A test whose green depends on ambient environment state is F-006 (attention topology) in the suite itself: it passes or fails for a reason outside what it claims to check. Discovered while fixing the CodeQL workflow-permissions alert — the tests were green on a clean tree and red with unrelated staged edits.
+**File:** `tests/unit/test_run_evals.py`
+**Approach:** Make the two axis tests hermetic. Either monkeypatch `get_diff_stats`/`check_protected_paths` to fixed values, or run the task inside a temporary git repo so the diff is controlled. The axis logic is what these tests assert; the git-diff coupling is incidental and should not be in the blast radius.
+**Rules:** Do not weaken the assertions to dodge the coupling. The fix is isolation, not a lower bar.
+**Verify:** The two tests pass regardless of the working-tree state — green with a dirty tree that touches a protected path, same as with a clean one.
+
 ---
 
 ## Reporting a new gap
