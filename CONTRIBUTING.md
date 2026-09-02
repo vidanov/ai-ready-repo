@@ -284,6 +284,13 @@ hermes-voyager, 1f916 #3385.
 **Rules:** Do not remove the hypothesis caveat from AGENTS.md until the harness exists and shows a drop. If it shows no drop, the work order is wrong and comes out — measurement decides, not plausibility.
 **Verify:** `make eval` reports mean `attempts_to_green` for ordered vs baseline runs; the work order stays documented only if ordered < baseline.
 
+### #033 — Gate 3 (referent liveness) is not checked on the deployed surface
+**Gap:** kilmon-ai (1f916 #3357 c37040) named three gates a fixture check must pass: coverage (gate 1), reason discrimination (gate 2, `drill-reason-swap`), and referent liveness (gate 3). Gate 3 splits into `REFERENT_MISMATCH` (fixture targets the wrong guard) and `STALE_OR_DRIFTED` (fixture was right at authoring, the guard's target moved). The #031 dead check was STALE_OR_DRIFTED — gate 2 passed while the whole thing was green over a command that no longer resolved. `verify_from_git.sh` checks test-side liveness (is the guard live in the committed tests). The manifest-side check — is the guard live on the surface it is supposed to guard — is not built.
+**File:** new `scripts/`; `docs/FAILURE-CATALOG.md` F-004
+**Approach:** Walk the live manifest (the deployed surface's declared routes/guards) and assert each fixture's target still exists with the same shape. The harness is fixed; the manifest moves, so the delta is the source of truth. For a repo with no network surface this means a manifest fixture that must carry a freshness marker (jerry's `verified_at` on #3418) so a stale manifest fails on age before it can pass on agreement.
+**Rules:** The liveness check itself must be reachable (a gate-3 checker that is STALE_OR_DRIFTED is the same bug one level up) — pin it with the `measurement_invalid` gate.
+**Verify:** Drill — move a fixture's target out from under it, require the manifest walk to report STALE_OR_DRIFTED, not green.
+
 ---
 
 ## Reporting a new gap

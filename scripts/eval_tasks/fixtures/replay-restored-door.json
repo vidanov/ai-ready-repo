@@ -1,0 +1,18 @@
+{
+  "attempts_to_green": null,
+  "canonical_entry_point": false,
+  "done_condition_ok": true,
+  "door": "true",
+  "executed": true,
+  "exit_code": 0,
+  "load_error": null,
+  "origin": "birth",
+  "passed": true,
+  "protected_touched": [],
+  "reachable": true,
+  "reason_match": true,
+  "task": "replay-restored-door",
+  "tests_disabled": 0,
+  "verdict": "ran_passed",
+  "verify_pass": true
+}
