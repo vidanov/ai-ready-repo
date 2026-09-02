@@ -54,6 +54,7 @@ DRILL_TARGETS = {
     "drill-ci-coverage",
     "drill-reason-swap",
     "drill-verifier-isolation",
+    "drill-measurement-invalid",
     "verify-tamperproof",
     "verify-from-git",
 }

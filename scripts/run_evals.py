@@ -13,6 +13,11 @@ Measures seven dimensions per task:
   - protected_touched: did the agent modify CODEOWNERS-protected paths?
   - diff_lines: total insertions + deletions (scope creep signal)
   - origin: where the task came from (birth/stranger/second-incident/live)
+  - verdict: ran_passed / ran_failed / measurement_invalid. The last is
+      disjoint from the first two — a task whose door did not run (exit 126/127)
+      carries no evidence and is excluded from the pass/fail rate rather than
+      counted as a failure. Proposed on 1f916 #3539 (jerry, terry-synctzn);
+      the negative drill is `make drill-measurement-invalid`.
 
 Tasks are defined in scripts/eval_tasks/. Each task is a YAML file with:
   Required:
@@ -150,6 +155,42 @@ def count_tests_disabled_in_diff() -> int:
     return count
 
 
+# Verdict output space (proposed on 1f916 #3539 by jerry c36960 and
+# terry-synctzn c37020, refined c37026/c37070/c37100). MEASUREMENT_INVALID
+# must be DISJOINT from the subject's ordinary verdicts: an aggregate must
+# never count "could not run" as a pass or a fail. A 127 and a genuine
+# failure both read as "not passing" only when the output space collapses
+# them into one bit — which is exactly how a dead check stayed invisible for
+# four days (CONTRIBUTING #031).
+VERDICT_RAN_PASSED = "ran_passed"
+VERDICT_RAN_FAILED = "ran_failed"
+VERDICT_MEASUREMENT_INVALID = "measurement_invalid"
+
+# Shell exit codes that mean the command never executed the subject, so the
+# result carries no evidence about pass/fail: 127 = command not found,
+# 126 = found but not executable.
+UNREACHABLE_EXIT_CODES = {126, 127}
+
+
+def classify_run(exit_code: int, expected_exit_code: int) -> tuple[bool, bool, str]:
+    """Map a subprocess result to (reachable, executed, verdict).
+
+    - unreachable (126/127): the door does not resolve to a runnable command,
+      so we have no evidence about the subject -> measurement_invalid.
+    - reachable and matches expected exit -> ran_passed.
+    - reachable but wrong exit -> ran_failed.
+
+    measurement_invalid is disjoint from ran_passed/ran_failed by construction:
+    the aggregate treats it as neither, so a corpse cannot be absorbed into a
+    green rate nor hidden inside a red one.
+    """
+    if exit_code in UNREACHABLE_EXIT_CODES:
+        return (False, False, VERDICT_MEASUREMENT_INVALID)
+    if exit_code == expected_exit_code:
+        return (True, True, VERDICT_RAN_PASSED)
+    return (True, True, VERDICT_RAN_FAILED)
+
+
 def uses_canonical_entry_point(verification: str) -> bool:
     """True if the verification command is the repo's documented interface.
 
@@ -276,7 +317,9 @@ def run_task(task_path: Path) -> dict[str, object]:
         text=True,
     )
     elapsed = time.monotonic() - start
-    verify_pass = result.returncode == task.get("expected_exit_code", 0)
+    expected_exit = task.get("expected_exit_code", 0)
+    verify_pass = result.returncode == expected_exit
+    reachable, executed, verdict = classify_run(result.returncode, expected_exit)
 
     # Check expected_reason in output (stdout + stderr)
     # Proves the gate knows WHY it stopped, not just that it stopped.
@@ -338,6 +381,11 @@ def run_task(task_path: Path) -> dict[str, object]:
         "origin": task.get("origin", "unknown"),
         "attempts_to_green": task.get("attempts_to_green"),
         "canonical_entry_point": uses_canonical_entry_point(task["verification"]),
+        "reachable": reachable,
+        "executed": executed,
+        "verdict": verdict,
+        "door": task["verification"],
+        "exit_code": result.returncode,
         "stdout": result.stdout[:500],
         "stderr": result.stderr[:500],
     }
@@ -364,24 +412,50 @@ def main() -> int:
 
     results = [run_task(t) for t in task_files]
 
-    # Denominator is ALL discovered files, including failed-to-load.
-    # A task that can't load is a failure, not a skip.
-    passed = sum(1 for r in results if r["passed"])
+    # Output-space invariant (1f916 #3539): measurement_invalid is DISJOINT from
+    # pass/fail. A task whose door did not resolve to a runnable command carries
+    # no evidence about the subject, so it cannot be counted as passed OR failed.
+    # Pulling it out of the denominator is what stops a corpse from being read as
+    # "one task is hard" (CONTRIBUTING #031). It is reported loudly, on its own.
+    invalid = [
+        r
+        for r in results
+        if not r.get("load_error")
+        and r.get("verdict") == VERDICT_MEASUREMENT_INVALID
+    ]
+    measurable = [r for r in results if r not in invalid]
+
+    # Denominator is measurable tasks only (load failures still count as
+    # failures — a task that can't load is a failure, not a corpse).
+    passed = sum(1 for r in measurable if r["passed"])
     failed_load = sum(1 for r in results if r.get("load_error"))
-    total = len(results)
+    total = len(measurable)
     rate = passed / total if total else 0.0
 
     print(f"\nEval results: {passed}/{total} passed ({rate:.0%})")
+    if invalid:
+        print(
+            f"  ⚠ {len(invalid)} task(s) MEASUREMENT_INVALID — door did not run, "
+            f"NOT counted as pass or fail:"
+        )
+        for r in invalid:
+            print(
+                f"      {r['task']}: exit {r.get('exit_code')} on "
+                f"`{r.get('door')}` (reachable={r.get('reachable')})"
+            )
     if failed_load:
         print(f"  ⚠ {failed_load} task(s) failed to load (counted as failures)\n")
     else:
         print()
 
     for r in results:
-        icon = "✓" if r["passed"] else "✗"
+        if r.get("verdict") == VERDICT_MEASUREMENT_INVALID:
+            icon = "⊘"  # neither pass nor fail — measurement invalid
+        else:
+            icon = "✓" if r["passed"] else "✗"
 
         if r.get("load_error"):
-            print(f"  {icon} {r['task']} [LOAD ERROR: {r['load_error']}]")
+            print(f"  ✗ {r['task']} [LOAD ERROR: {r['load_error']}]")
             continue
 
         flags = []
