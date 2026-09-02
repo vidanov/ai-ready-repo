@@ -172,6 +172,13 @@ VERDICT_MEASUREMENT_INVALID = "measurement_invalid"
 # 126 = found but not executable.
 UNREACHABLE_EXIT_CODES = {126, 127}
 
+# Minimum share of runs that must be valid measurements for the pass rate to be
+# called healthy (jerry c37451 + latex c37440, 1f916 #3539). Disjointness alone
+# lets the rate read 100% as the harness rots — 9 corpses + 1 pass reports 1/1.
+# Coverage is the unomittable companion; below this floor the rate is not
+# trustworthy no matter how green, and the run exits nonzero.
+MEASUREMENT_COVERAGE_FLOOR = 0.75
+
 
 def classify_run(exit_code: int, expected_exit_code: int) -> tuple[bool, bool, str]:
     """Map a subprocess result to (reachable, executed, verdict).
@@ -410,6 +417,64 @@ def run_task(task_path: Path) -> dict[str, object]:
     return receipt.to_dict()
 
 
+@dataclass
+class EvalAggregate:
+    """Two axes, kept separate on purpose (1f916 #3539).
+
+    - pass rate (passed/total): over MEASURABLE tasks only. A corpse is never
+      counted as a pass or a fail — that disjointness is the PR #42 invariant.
+    - coverage (valid_runs/total_runs): over ALL runs. This is the axis latex
+      named as missing: dropping invalid rows from the pass denominator lets the
+      rate read 100% while the harness rots. Coverage cannot be omitted, and
+      coverage_ok gates whether the rate is trustworthy at all.
+    """
+
+    passed: int
+    total: int
+    rate: float
+    valid_runs: int
+    total_runs: int
+    coverage: float
+    coverage_ok: bool
+    failed_load: int
+
+
+def aggregate(results: list[dict], floor: float = MEASUREMENT_COVERAGE_FLOOR) -> EvalAggregate:
+    """Compute both axes from per-task receipts.
+
+    A measurement is invalid whenever verdict == measurement_invalid — which
+    includes load errors (a file that can't load carries no evidence). Those
+    invalid runs are pulled from the pass/fail denominator but stay in the
+    coverage denominator, so a run that is all corpses cannot launder itself
+    into a healthy-looking rate.
+    """
+    total_runs = len(results)
+    invalid = [r for r in results if r.get("verdict") == VERDICT_MEASUREMENT_INVALID]
+    measurable = [r for r in results if r.get("verdict") != VERDICT_MEASUREMENT_INVALID]
+
+    passed = sum(1 for r in measurable if r.get("passed"))
+    total = len(measurable)
+    rate = passed / total if total else 0.0
+
+    valid_runs = total_runs - len(invalid)
+    coverage = valid_runs / total_runs if total_runs else 0.0
+    # An empty run has no coverage to defend; a run with any tasks must clear
+    # the floor.
+    coverage_ok = total_runs == 0 or coverage >= floor
+
+    failed_load = sum(1 for r in results if r.get("load_error"))
+    return EvalAggregate(
+        passed=passed,
+        total=total,
+        rate=rate,
+        valid_runs=valid_runs,
+        total_runs=total_runs,
+        coverage=coverage,
+        coverage_ok=coverage_ok,
+        failed_load=failed_load,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run agent evaluation tasks")
     parser.add_argument("--task", help="Run a single task by name")
@@ -431,27 +496,24 @@ def main() -> int:
 
     results = [run_task(t) for t in task_files]
 
-    # Output-space invariant (1f916 #3539): measurement_invalid is DISJOINT from
-    # pass/fail. A task whose door did not resolve to a runnable command carries
-    # no evidence about the subject, so it cannot be counted as passed OR failed.
-    # Pulling it out of the denominator is what stops a corpse from being read as
-    # "one task is hard" (CONTRIBUTING #031). It is reported loudly, on its own.
+    # Two axes, computed once (1f916 #3539). See aggregate() for why pass rate
+    # and coverage use different denominators.
+    agg = aggregate(results)
     invalid = [
         r
         for r in results
         if not r.get("load_error")
         and r.get("verdict") == VERDICT_MEASUREMENT_INVALID
     ]
-    measurable = [r for r in results if r not in invalid]
-
-    # Denominator is measurable tasks only (load failures still count as
-    # failures — a task that can't load is a failure, not a corpse).
-    passed = sum(1 for r in measurable if r["passed"])
-    failed_load = sum(1 for r in results if r.get("load_error"))
-    total = len(measurable)
-    rate = passed / total if total else 0.0
+    passed, total, rate = agg.passed, agg.total, agg.rate
 
     print(f"\nEval results: {passed}/{total} passed ({rate:.0%})")
+    # Coverage is reported next to the rate, always, so a green number can never
+    # be read without knowing how much of the harness was even measurable.
+    print(
+        f"Measurement coverage: {agg.valid_runs}/{agg.total_runs} runs valid "
+        f"({agg.coverage:.0%}, floor {MEASUREMENT_COVERAGE_FLOOR:.0%})"
+    )
     if invalid:
         print(
             f"  ⚠ {len(invalid)} task(s) MEASUREMENT_INVALID — door did not run, "
@@ -462,8 +524,11 @@ def main() -> int:
                 f"      {r['task']}: exit {r.get('exit_code')} on "
                 f"`{r.get('door')}` (reachable={r.get('reachable')})"
             )
-    if failed_load:
-        print(f"  ⚠ {failed_load} task(s) failed to load (counted as failures)\n")
+    if agg.failed_load:
+        print(
+            f"  ⚠ {agg.failed_load} task(s) failed to load "
+            f"(measurement_invalid — they lower coverage)\n"
+        )
     else:
         print()
 
@@ -530,6 +595,16 @@ def main() -> int:
     if args.baseline:
         save_baseline({"success_rate": rate, "tasks": total})
         return 0
+
+    if not agg.coverage_ok:
+        print(
+            f"\n✗ Measurement coverage {agg.coverage:.0%} below floor "
+            f"{MEASUREMENT_COVERAGE_FLOOR:.0%}: the pass rate is not trustworthy. "
+            f"{agg.total_runs - agg.valid_runs} of {agg.total_runs} runs never "
+            f"reached the subject. A green rate over a rotting harness is the "
+            f"original dead-check bug one level up (1f916 #3539)."
+        )
+        return 1
 
     if rate < prior_rate - 0.05:  # 5% regression threshold
         print(f"\n✗ Regression: {rate:.0%} < baseline {prior_rate:.0%}")
