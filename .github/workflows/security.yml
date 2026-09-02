@@ -12,6 +12,12 @@ on:
 # 2. secret-scan       — runs gitleaks to detect hardcoded secrets in history and
 #                        new commits.
 
+# Least privilege (CodeQL actions/missing-workflow-permissions): default to
+# read-only. dependency-review widens to pull-requests: write at the job level
+# because it posts the review comment; secret-scan inherits read-only.
+permissions:
+  contents: read
+
 jobs:
   dependency-review:
     name: Dependency review

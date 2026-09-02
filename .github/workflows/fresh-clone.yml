@@ -9,6 +9,10 @@ on:
 # Verifies that a fresh clone can bootstrap and pass verification without
 # any pre-cached state. Catches setup-instruction drift early.
 
+# Least privilege (CodeQL actions/missing-workflow-permissions): read-only.
+permissions:
+  contents: read
+
 jobs:
   fresh-clone:
     name: Fresh clone bootstrap + verify
