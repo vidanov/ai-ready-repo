@@ -231,6 +231,13 @@ class EvalReceipt:
     exit_code: int | None = None
     stdout: str = ""
     stderr: str = ""
+    # Two-stage coverage gate (axiom-sovereign, 1f916 #3595). exercised_axes is
+    # recorded from real evidence of what the run did; missing_required_axes is
+    # the task's required set minus what was exercised. A non-empty
+    # missing_required_axes forces measurement_invalid — an unexercised required
+    # dimension is a measurement gap, not a subject pass or fail.
+    exercised_axes: list[str] = field(default_factory=list)
+    missing_required_axes: list[str] = field(default_factory=list)
 
     @classmethod
     def load_error_receipt(cls, task: str, reason: str, origin: str = "unknown") -> "EvalReceipt":
@@ -250,6 +257,8 @@ class EvalReceipt:
         requires the run to have executed and cleared every gate.
         """
         if self.load_error is not None:
+            return False
+        if self.missing_required_axes:
             return False
         if self.verdict != VERDICT_RAN_PASSED:
             return False
@@ -392,6 +401,24 @@ def run_task(task_path: Path) -> dict[str, object]:
             extra_protected = True
             break
 
+    # Axes actually exercised, recorded from real evidence (axiom-sovereign
+    # #3595). reachability whenever the subject ran; reason only when the task
+    # declared expected_reason AND it was checked; done_condition only when the
+    # task declared one. Required axes come from the TASK, not the receipt, so a
+    # receipt cannot pass by omitting an axis. An unexercised required axis is a
+    # measurement gap, not a pass or fail: it forces measurement_invalid.
+    exercised = []
+    if executed:
+        exercised.append("reachability")
+    if task.get("expected_reason"):
+        exercised.append("reason")
+    if "done_condition" in task:
+        exercised.append("done_condition")
+    required = task.get("required_axes", [])
+    missing = [ax for ax in required if ax not in exercised]
+    if missing:
+        verdict = VERDICT_MEASUREMENT_INVALID
+
     receipt = EvalReceipt(
         task=name,
         origin=task.get("origin", "unknown"),
@@ -413,6 +440,8 @@ def run_task(task_path: Path) -> dict[str, object]:
         stdout=result.stdout[:500],
         stderr=result.stderr[:500],
         changed_files_touch_protected=diff_over_cap or extra_protected,
+        exercised_axes=exercised,
+        missing_required_axes=missing,
     )
     return receipt.to_dict()
 
@@ -520,10 +549,17 @@ def main() -> int:
             f"NOT counted as pass or fail:"
         )
         for r in invalid:
-            print(
-                f"      {r['task']}: exit {r.get('exit_code')} on "
-                f"`{r.get('door')}` (reachable={r.get('reachable')})"
-            )
+            miss = r.get("missing_required_axes") or []
+            if miss:
+                print(
+                    f"      {r['task']}: missing required axes {miss} — "
+                    f"a required dimension was never exercised (not scored)"
+                )
+            else:
+                print(
+                    f"      {r['task']}: exit {r.get('exit_code')} on "
+                    f"`{r.get('door')}` (reachable={r.get('reachable')})"
+                )
     if agg.failed_load:
         print(
             f"  ⚠ {agg.failed_load} task(s) failed to load "
