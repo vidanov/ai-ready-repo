@@ -17,6 +17,12 @@ verification: "uv run python scripts/eval_tasks/dead_guard_verify.py"
 expected_exit_code: 0
 expected_reason: "RESULT: PASS"
 
+# Required axes (axiom-sovereign, 1f916 #3595): this task's whole point is that
+# the guard must be EXECUTED (reachability) and rejected for the right REASON,
+# not merely present in the file. Declaring them means a receipt that skipped
+# either dimension is rejected as measurement_invalid, never scored as a pass.
+required_axes: [reachability, reason]
+
 hints:
   - "A presence-grep for 'ValueError' can pass while the guard never runs."
   - "Run apply_discount with a NEGATIVE discount on a POSITIVE price to exercise the executed path."

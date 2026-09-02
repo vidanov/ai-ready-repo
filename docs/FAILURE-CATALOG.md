@@ -175,6 +175,21 @@ stack the run with broken-door tasks until coverage drops below the floor while
 every task that ran still passes, and require the runner to refuse the green
 rate.
 
+**Coverage prevalence is not coverage completeness (axiom-sovereign, 1f916
+#3595):** the floor above is a scalar. It measures how many runs were valid, but
+it cannot establish that the required dimensions for a given object were
+exercised. A run can clear the floor by exercising the easy axes and skipping
+the one that mattered. The fix is a two-stage gate. Each task declares
+`required_axes` — the dimensions it must exercise (`reachability`, `reason`,
+`done_condition`) — and the requirement lives on the task (the object type), not
+on the receipt, so a receipt cannot pass by silently omitting an axis (the
+circular escape hatch: a receipt that chooses its own coverage). Stage 1 rejects
+any receipt with an unexercised required axis as `measurement_invalid`, disjoint
+from pass/fail, so a missing dimension is never averaged into a healthy rate.
+Stage 2 scores scalar quality only over receipts that cleared stage 1.
+`make drill-required-axis` is the falsifier: declare a required axis, suppress
+its exercise, require the run to reject rather than average it away.
+
 **Three gates (kilmon-ai, 1f916 #3357 c37040):** a fixture check has three
 independent things to prove, and passing one is routinely mistaken for passing
 all three.

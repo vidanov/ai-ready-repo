@@ -227,3 +227,89 @@ def test_load_errors_count_against_coverage() -> None:
 
 def test_coverage_floor_constant_exists() -> None:
     assert 0.0 < run_evals.MEASUREMENT_COVERAGE_FLOOR <= 1.0
+
+
+# ── Required axes: two-stage coverage gate (axiom-sovereign, 1f916 #3595) ────
+# A scalar coverage floor measures prevalence (how many runs were valid) but
+# cannot establish that the required DIMENSIONS for this object were exercised.
+# The required set is declared on the TASK (the object type), not the receipt,
+# so a receipt cannot pass by silently omitting an axis. Stage 1 rejects any
+# receipt with an unexercised required axis (missing_required_axes, disjoint
+# from pass/fail like measurement_invalid); stage 2 scores what remains.
+
+
+def test_exercised_axes_recorded_from_real_evidence(tmp_path) -> None:
+    """A task that checks reason + done_condition records those axes as
+    exercised; reachability is exercised whenever the subject actually ran."""
+    task = tmp_path / "t.yaml"
+    task.write_text(
+        'description: "x"\n'
+        'verification: "echo WHY_TAG"\n'
+        "expected_exit_code: 0\n"
+        'expected_reason: "WHY_TAG"\n'
+        'done_condition: "true"\n'
+        "origin: birth\n"
+    )
+    r = run_evals.run_task(task)
+    axes = set(r["exercised_axes"])
+    assert "reachability" in axes
+    assert "reason" in axes
+    assert "done_condition" in axes
+
+
+def test_unexercised_axis_not_recorded(tmp_path) -> None:
+    """A task that declares no reason check does not claim the reason axis."""
+    task = tmp_path / "t.yaml"
+    task.write_text(
+        'description: "x"\nverification: "true"\nexpected_exit_code: 0\norigin: birth\n'
+    )
+    r = run_evals.run_task(task)
+    assert "reason" not in set(r["exercised_axes"])
+
+
+def test_missing_required_axis_rejected_before_scoring(tmp_path) -> None:
+    """Stage 1: a task requires the reason axis but never exercises it. The
+    receipt must be rejected as missing_required_axes, NOT scored as a pass."""
+    task = tmp_path / "t.yaml"
+    task.write_text(
+        'description: "x"\n'
+        'verification: "true"\n'  # passes, but no expected_reason -> reason axis not exercised
+        "expected_exit_code: 0\n"
+        "required_axes: [reachability, reason]\n"
+        "origin: birth\n"
+    )
+    r = run_evals.run_task(task)
+    assert r["missing_required_axes"] == ["reason"]
+    assert r["passed"] is False
+    # disjoint from ordinary pass/fail, like measurement_invalid
+    assert r["verdict"] == run_evals.VERDICT_MEASUREMENT_INVALID
+
+
+def test_all_required_axes_exercised_proceeds_to_scoring(tmp_path) -> None:
+    task = tmp_path / "t.yaml"
+    task.write_text(
+        'description: "x"\n'
+        'verification: "echo WHY_TAG"\n'
+        "expected_exit_code: 0\n"
+        'expected_reason: "WHY_TAG"\n'
+        "required_axes: [reachability, reason]\n"
+        "origin: birth\n"
+    )
+    r = run_evals.run_task(task)
+    assert r["missing_required_axes"] == []
+    assert r["passed"] is True
+    assert r["verdict"] == run_evals.VERDICT_RAN_PASSED
+
+
+def test_aggregate_excludes_missing_axis_from_rate() -> None:
+    """A receipt rejected for a missing required axis is measurement_invalid:
+    it must not be averaged into the pass rate (axiom-sovereign's phrase)."""
+    good = _receipt(run_evals.VERDICT_RAN_PASSED, passed=True)
+    good["missing_required_axes"] = []
+    missing = _receipt(run_evals.VERDICT_MEASUREMENT_INVALID)
+    missing["missing_required_axes"] = ["reason"]
+    agg = run_evals.aggregate([good, missing])
+    assert agg.passed == 1
+    assert agg.total == 1  # missing-axis row is out of the pass/fail denominator
+    assert agg.rate == 1.0
+    assert agg.coverage == 0.5  # but it counts against coverage
