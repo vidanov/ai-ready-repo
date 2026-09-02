@@ -31,7 +31,9 @@ origin: birth
 oracle_question: "does a missing door produce measurement_invalid disjoint from pass/fail?"
 YAML
 
+set +e
 OUT="$(uv run python scripts/run_evals.py 2>&1)"
+set -e
 
 if ! echo "$OUT" | grep -q "MEASUREMENT_INVALID"; then
 	echo "✗ drill-measurement-invalid FAILED: broken door was not classified measurement_invalid"
@@ -68,7 +70,9 @@ origin: birth
 oracle_question: "does a working door produce ran_passed?"
 YAML
 
+set +e
 OUT2="$(uv run python scripts/run_evals.py 2>&1)"
+set -e
 if echo "$OUT2" | grep -q "MEASUREMENT_INVALID"; then
 	echo "✗ drill-measurement-invalid FAILED: restored door still read as measurement_invalid"
 	echo "$OUT2"

@@ -216,6 +216,9 @@ drill-reason-swap: ## Prove drill assertions test the specific violation, not ju
 drill-measurement-invalid: ## Prove the eval gate treats a corpse (unrun check) as distinct from a failure (1f916 #3539)
 	@bash scripts/drill_measurement_invalid.sh
 
+drill-coverage-floor: ## Prove a green pass rate over a rotting harness is refused, not laundered (1f916 #3539)
+	@bash scripts/drill_coverage_floor.sh
+
 .PHONY: verify-tamperproof
 verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
 	@bash scripts/verify_tamperproof.sh
