@@ -10,6 +10,8 @@ bootstrap: ## Set up a fresh development environment from scratch
 	uv pip install -e ".[dev]"
 	@echo "→ Copying .env.example → .env (if not present)..."
 	@test -f .env || cp .env.example .env
+	@echo "→ Wiring versioned git hooks (.githooks/)..."
+	@git config core.hooksPath .githooks
 	@echo "→ Bootstrap complete. Activate with: source .venv/bin/activate"
 	@echo "→ Verify with: make check-env"
 
@@ -79,7 +81,7 @@ security: ## Run security scan
 # ── Verification ladder ──────────────────────────────────────────────────────
 
 .PHONY: verify
-verify: format-check lint typecheck import-check test-unit validate-adrs ## Run complete verification (same as CI)
+verify: format-check lint typecheck import-check test-unit validate-adrs sync-badges-check ## Run complete verification (same as CI)
 	@echo "✓ All checks passed"
 
 .PHONY: verify-fast
@@ -109,6 +111,16 @@ adopt: ## Generate AI-readiness scaffold in another repo (usage: make adopt REPO
 .PHONY: adopt-dry-run
 adopt-dry-run: ## Show what adopt would generate without writing files (usage: make adopt-dry-run REPO=/path/to/repo)
 	@python3 scripts/adopt.py $(REPO) --dry-run
+
+# ── Badge sync ───────────────────────────────────────────────────────────────
+
+.PHONY: sync-badges
+sync-badges: ## Recompute README's Open Items badge from CONTRIBUTING.md and fix it in place
+	@python3 scripts/sync_readme_badges.py
+
+.PHONY: sync-badges-check
+sync-badges-check: ## Fail if README's Open Items badge is stale (no write) — run in CI
+	@python3 scripts/sync_readme_badges.py --check
 
 # ── Lint changed files only ──────────────────────────────────────────────────
 

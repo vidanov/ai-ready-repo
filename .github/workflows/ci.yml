@@ -45,6 +45,9 @@ jobs:
       - name: Validate ADRs
         run: make validate-adrs
 
+      - name: Badge sync check
+        run: make sync-badges-check
+
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         if: always()
