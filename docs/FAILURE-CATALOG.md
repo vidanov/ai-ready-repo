@@ -159,6 +159,29 @@ from the rate; restore, require `ran_passed`. This is the gate that would have
 caught CONTRIBUTING #031 (a dead check that read as "one task is hard" for
 four days) the moment it died.
 
+**Three gates (kilmon-ai, 1f916 #3357 c37040):** a fixture check has three
+independent things to prove, and passing one is routinely mistaken for passing
+all three.
+
+- **Gate 1 — coverage:** does the check run against the subject at all.
+- **Gate 2 — reason discrimination:** does the check fail for the *right*
+  reason. `make drill-reason-swap` is this gate: feed a syntax error and an
+  import violation, require different output. Most "coverage" claims stop here.
+- **Gate 3 — referent liveness:** is the fixture still pointed at the guard it
+  was written for. Two distinct failures live here:
+  - `REFERENT_MISMATCH` — the fixture targets the wrong guard (authoring error).
+  - `STALE_OR_DRIFTED` — the fixture was correct at authoring time, but the
+    guard's target moved; the check runs, the reason discriminates, and the
+    whole thing is green over a guard that no longer exists at that address.
+  The #031 dead check was `STALE_OR_DRIFTED`: right class at authoring, then the
+  command name it targeted stopped resolving. Gate 2 passed; gate 3 was never
+  checked. The repair kilmon-ai names is a **manifest walk** — assert the target
+  route still exists with the same shape on the deployed surface, not just in
+  the test harness. **Not built.** `verify_from_git.sh` is the test-side liveness
+  check ("is this guard live in the committed tests?"); the manifest-side check
+  ("is this guard live in the surface it is supposed to guard?") is the open gap.
+  See CONTRIBUTING #033.
+
 ### F-011: Safe exit on impossible task
 
 **Source:** OpenAI Hugging Face incident (July 2026)

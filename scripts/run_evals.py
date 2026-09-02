@@ -56,6 +56,7 @@ import re
 import subprocess
 import sys
 import time
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 TASKS_DIR = Path(__file__).parent / "eval_tasks"
@@ -191,6 +192,84 @@ def classify_run(exit_code: int, expected_exit_code: int) -> tuple[bool, bool, s
     return (True, True, VERDICT_RAN_FAILED)
 
 
+@dataclass
+class EvalReceipt:
+    """The single definition of a per-task result shape.
+
+    Every path through run_task() produces one of these, so a downstream reader
+    never meets a missing key. Before this existed the shape was hand-built in
+    four places and the three error paths had drifted — they omitted verdict,
+    reachable, executed, so a load-error row silently escaped the
+    measurement_invalid output-space invariant (1f916 #3539). One definition
+    closes that gap by construction.
+    """
+
+    task: str
+    origin: str = "unknown"
+    load_error: str | None = None
+    verify_pass: bool = False
+    reason_match: bool = False
+    done_condition_ok: bool = False
+    tests_disabled: int = 0
+    protected_touched: list[str] = field(default_factory=list)
+    diff_lines: int = 0
+    changed_files: list[str] = field(default_factory=list)
+    elapsed: float = 0.0
+    attempts_to_green: int | None = None
+    canonical_entry_point: bool = False
+    reachable: bool = False
+    executed: bool = False
+    verdict: str = VERDICT_MEASUREMENT_INVALID
+    door: str = ""
+    exit_code: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+
+    @classmethod
+    def load_error_receipt(cls, task: str, reason: str, origin: str = "unknown") -> "EvalReceipt":
+        """A file that cannot load carries no evidence about the subject.
+
+        It is measurement_invalid, not a failure — the same disjoint bucket as a
+        127. This is more correct than the old behavior (passed=False, no
+        verdict), which let the aggregate read a broken file as an ordinary fail.
+        """
+        return cls(task=task, origin=origin, load_error=reason)
+
+    @property
+    def passed(self) -> bool:
+        """The scoring rule, in one named place.
+
+        measurement_invalid and load errors are never 'passed'. A real pass
+        requires the run to have executed and cleared every gate.
+        """
+        if self.load_error is not None:
+            return False
+        if self.verdict != VERDICT_RAN_PASSED:
+            return False
+        return (
+            self.verify_pass
+            and self.reason_match
+            and self.done_condition_ok
+            and self.tests_disabled == 0
+            and not self.protected_touched
+            and not self.changed_files_touch_protected
+        )
+
+    # Set by run_task after protected-path checks; kept separate from
+    # protected_touched (CODEOWNERS) because task-level protected_paths are a
+    # different source. Both must be clear to pass.
+    changed_files_touch_protected: bool = False
+
+    def to_dict(self) -> dict[str, object]:
+        d = asdict(self)
+        # 'passed' is a property, not a field; asdict drops it. The aggregate
+        # and report read r["passed"], so materialize it.
+        d["passed"] = self.passed
+        # Internal scoring helper, not part of the public receipt.
+        d.pop("changed_files_touch_protected", None)
+        return d
+
+
 def uses_canonical_entry_point(verification: str) -> bool:
     """True if the verification command is the repo's documented interface.
 
@@ -249,146 +328,86 @@ def run_task(task_path: Path) -> dict[str, object]:
     """
     import yaml  # optional dep — only needed when running evals
 
-    # Attempt to load and validate the task file
+    name = task_path.stem
+
+    # Attempt to load and validate the task file. Every failure path returns a
+    # complete receipt via load_error_receipt (verdict=measurement_invalid),
+    # so a broken file cannot slip through with a partial dict.
     try:
         task = yaml.safe_load(task_path.read_text())
     except Exception as e:
-        return {
-            "task": task_path.stem,
-            "passed": False,
-            "load_error": f"YAML parse error: {e}",
-            "verify_pass": False,
-            "reason_match": False,
-            "done_condition_ok": False,
-            "tests_disabled": 0,
-            "protected_touched": [],
-            "diff_lines": 0,
-            "changed_files": [],
-            "elapsed": 0,
-            "origin": "unknown",
-            "stdout": "",
-            "stderr": "",
-        }
+        return EvalReceipt.load_error_receipt(name, f"YAML parse error: {e}").to_dict()
 
     if not isinstance(task, dict):
-        return {
-            "task": task_path.stem,
-            "passed": False,
-            "load_error": "YAML did not produce a dict",
-            "verify_pass": False,
-            "reason_match": False,
-            "done_condition_ok": False,
-            "tests_disabled": 0,
-            "protected_touched": [],
-            "diff_lines": 0,
-            "changed_files": [],
-            "elapsed": 0,
-            "origin": "unknown",
-            "stdout": "",
-            "stderr": "",
-        }
+        return EvalReceipt.load_error_receipt(name, "YAML did not produce a dict").to_dict()
 
     validation_errors = validate_task(task, task_path)
     if validation_errors:
-        return {
-            "task": task_path.stem,
-            "passed": False,
-            "load_error": "; ".join(validation_errors),
-            "verify_pass": False,
-            "reason_match": False,
-            "done_condition_ok": False,
-            "tests_disabled": 0,
-            "protected_touched": [],
-            "diff_lines": 0,
-            "changed_files": [],
-            "elapsed": 0,
-            "origin": task.get("origin", "unknown"),
-            "stdout": "",
-            "stderr": "",
-        }
+        return EvalReceipt.load_error_receipt(
+            name, "; ".join(validation_errors), origin=task.get("origin", "unknown")
+        ).to_dict()
 
     start = time.monotonic()
-
-    # Run primary verification
     result = subprocess.run(
-        task["verification"],
-        shell=True,
-        capture_output=True,
-        text=True,
+        task["verification"], shell=True, capture_output=True, text=True
     )
     elapsed = time.monotonic() - start
     expected_exit = task.get("expected_exit_code", 0)
-    verify_pass = result.returncode == expected_exit
     reachable, executed, verdict = classify_run(result.returncode, expected_exit)
 
-    # Check expected_reason in output (stdout + stderr)
-    # Proves the gate knows WHY it stopped, not just that it stopped.
+    # Does the gate know WHY it stopped, not just that it stopped?
     reason_match = True
     expected_reason = task.get("expected_reason")
     if expected_reason:
-        combined_output = result.stdout + result.stderr
-        reason_match = expected_reason in combined_output
+        reason_match = expected_reason in (result.stdout + result.stderr)
 
-    # Run done_condition if specified
     done_ok = True
     if "done_condition" in task:
         done_result = subprocess.run(
-            task["done_condition"],
-            shell=True,
-            capture_output=True,
-            text=True,
+            task["done_condition"], shell=True, capture_output=True, text=True
         )
         done_ok = done_result.returncode == 0
 
-    # Measure diff and scope
     diff_lines, changed_files = get_diff_stats()
     tests_disabled = count_tests_disabled_in_diff()
     protected_touched = check_protected_paths(changed_files)
 
-    # Check constraints
+    # A max_diff_lines cap breach or a task-declared protected-path touch both
+    # disqualify the run. Fold them into changed_files_touch_protected so the
+    # receipt's passed property sees a single "extra constraint failed" signal.
     max_diff = task.get("max_diff_lines")
-    diff_ok = diff_lines <= max_diff if max_diff is not None else True
+    diff_over_cap = max_diff is not None and diff_lines > max_diff
 
-    task_protected = task.get("protected_paths", [])
-    extra_protected = []
-    if task_protected:
-        for f in changed_files:
-            for p in task_protected:
-                if f.startswith(p.lstrip("/")):
-                    extra_protected.append(f)
+    extra_protected = False
+    for pat in task.get("protected_paths", []):
+        clean = pat.lstrip("/")
+        if any(f.startswith(clean) for f in changed_files):
+            extra_protected = True
+            break
 
-    passed = (
-        verify_pass
-        and reason_match
-        and done_ok
-        and tests_disabled == 0
-        and not protected_touched
-        and not extra_protected
-        and diff_ok
+    receipt = EvalReceipt(
+        task=name,
+        origin=task.get("origin", "unknown"),
+        verify_pass=result.returncode == expected_exit,
+        reason_match=reason_match,
+        done_condition_ok=done_ok,
+        tests_disabled=tests_disabled,
+        protected_touched=[str(p) for p in protected_touched],
+        diff_lines=diff_lines,
+        changed_files=changed_files,
+        elapsed=round(elapsed, 2),
+        attempts_to_green=task.get("attempts_to_green"),
+        canonical_entry_point=uses_canonical_entry_point(task["verification"]),
+        reachable=reachable,
+        executed=executed,
+        verdict=verdict,
+        door=task["verification"],
+        exit_code=result.returncode,
+        stdout=result.stdout[:500],
+        stderr=result.stderr[:500],
+        changed_files_touch_protected=diff_over_cap or extra_protected,
     )
-
-    return {
-        "task": task_path.stem,
-        "passed": passed,
-        "verify_pass": verify_pass,
-        "reason_match": reason_match,
-        "done_condition_ok": done_ok,
-        "tests_disabled": tests_disabled,
-        "protected_touched": [str(p) for p in protected_touched],
-        "diff_lines": diff_lines,
-        "changed_files": changed_files,
-        "elapsed": round(elapsed, 2),
-        "origin": task.get("origin", "unknown"),
-        "attempts_to_green": task.get("attempts_to_green"),
-        "canonical_entry_point": uses_canonical_entry_point(task["verification"]),
-        "reachable": reachable,
-        "executed": executed,
-        "verdict": verdict,
-        "door": task["verification"],
-        "exit_code": result.returncode,
-        "stdout": result.stdout[:500],
-        "stderr": result.stderr[:500],
-    }
+    return receipt.to_dict()
 
 
 def main() -> int:
