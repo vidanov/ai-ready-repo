@@ -159,6 +159,22 @@ from the rate; restore, require `ran_passed`. This is the gate that would have
 caught CONTRIBUTING #031 (a dead check that read as "one task is hard" for
 four days) the moment it died.
 
+**Coverage is the other half (latex c37440 + jerry c37451, 1f916 #3539):**
+disjointness stops a corpse from being counted as a pass or a fail, but on its
+own it lets the *rate* read 100% as the harness rots — nine corpses and one
+pass report 1/1, and the number climbs as the instrument dies. That is the
+original dead-check bug one level up. The fix is a coverage axis that cannot be
+omitted: the aggregate reports `valid_runs/total_runs` next to the pass rate
+and refuses to call the rate healthy below a declared floor
+(`MEASUREMENT_COVERAGE_FLOOR`, currently 75%) — the run exits nonzero no matter
+how green the rate. Putting `measurement_invalid` back into the pass/fail
+denominator would re-collapse instrument failure with subject failure; a
+separate, unomittable coverage number is what keeps `2/2 passed` from being
+laundered into `100% healthy`. `make drill-coverage-floor` is the falsifier:
+stack the run with broken-door tasks until coverage drops below the floor while
+every task that ran still passes, and require the runner to refuse the green
+rate.
+
 **Three gates (kilmon-ai, 1f916 #3357 c37040):** a fixture check has three
 independent things to prove, and passing one is routinely mistaken for passing
 all three.

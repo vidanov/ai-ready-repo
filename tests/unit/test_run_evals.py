@@ -156,3 +156,74 @@ def test_replay_fixtures_pin_the_invariant() -> None:
 
     # The invariant: the two verdicts are distinct values, not one bit.
     assert missing["verdict"] != restored["verdict"]
+
+
+# ── Measurement coverage (jerry c37451 + latex c37440, 1f916 #3539) ──────────
+# Dropping measurement_invalid from the pass/fail denominator is correct
+# (disjointness), but on its own it lets the rate read 100% as the harness
+# rots: 9 corpses + 1 pass reports 1/1. Coverage is the unomittable companion
+# field, and a floor makes the run refuse to call a low-coverage rate healthy.
+
+
+def _receipt(verdict: str, passed: bool = False, load_error: str | None = None) -> dict:
+    """Minimal receipt for aggregate() tests."""
+    r = run_evals.EvalReceipt(task="t", verdict=verdict).to_dict()
+    r["passed"] = passed
+    if load_error is not None:
+        r["load_error"] = load_error
+    return r
+
+
+def test_aggregate_reports_coverage() -> None:
+    results = [
+        _receipt(run_evals.VERDICT_RAN_PASSED, passed=True),
+        _receipt(run_evals.VERDICT_RAN_PASSED, passed=True),
+        _receipt(run_evals.VERDICT_MEASUREMENT_INVALID),
+    ]
+    agg = run_evals.aggregate(results)
+    # pass rate is over measurable tasks only: 2/2
+    assert agg.passed == 2
+    assert agg.total == 2
+    assert agg.rate == 1.0
+    # coverage is over ALL runs: 2 of 3 measurements were valid
+    assert agg.valid_runs == 2
+    assert agg.total_runs == 3
+    assert agg.coverage == 2 / 3
+
+
+def test_coverage_floor_fails_a_rotting_harness() -> None:
+    """The launder case latex named: nine corpses and one pass. Pass rate is
+    100% but coverage is 10% — the aggregate must refuse to call it healthy."""
+    results = [_receipt(run_evals.VERDICT_RAN_PASSED, passed=True)]
+    results += [_receipt(run_evals.VERDICT_MEASUREMENT_INVALID) for _ in range(9)]
+    agg = run_evals.aggregate(results)
+    assert agg.rate == 1.0  # technically 1/1
+    assert agg.coverage == 0.1
+    assert agg.coverage_ok is False  # below floor — not healthy
+
+
+def test_full_coverage_passes_floor() -> None:
+    results = [
+        _receipt(run_evals.VERDICT_RAN_PASSED, passed=True),
+        _receipt(run_evals.VERDICT_RAN_FAILED, passed=False),
+    ]
+    agg = run_evals.aggregate(results)
+    assert agg.coverage == 1.0
+    assert agg.coverage_ok is True
+
+
+def test_load_errors_count_against_coverage() -> None:
+    """A file that cannot load is measurement_invalid too — it lowers coverage,
+    it is not silently dropped."""
+    results = [
+        _receipt(run_evals.VERDICT_RAN_PASSED, passed=True),
+        _receipt(run_evals.VERDICT_MEASUREMENT_INVALID, load_error="bad yaml"),
+    ]
+    agg = run_evals.aggregate(results)
+    assert agg.valid_runs == 1
+    assert agg.total_runs == 2
+    assert agg.coverage == 0.5
+
+
+def test_coverage_floor_constant_exists() -> None:
+    assert 0.0 < run_evals.MEASUREMENT_COVERAGE_FLOOR <= 1.0
