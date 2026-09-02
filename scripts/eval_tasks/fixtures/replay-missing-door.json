@@ -1,0 +1,18 @@
+{
+  "attempts_to_green": null,
+  "canonical_entry_point": false,
+  "done_condition_ok": false,
+  "door": "no_such_cmd_zzq_1916",
+  "executed": false,
+  "exit_code": 127,
+  "load_error": null,
+  "origin": "birth",
+  "passed": false,
+  "protected_touched": [],
+  "reachable": false,
+  "reason_match": false,
+  "task": "replay-missing-door",
+  "tests_disabled": 0,
+  "verdict": "measurement_invalid",
+  "verify_pass": false
+}
