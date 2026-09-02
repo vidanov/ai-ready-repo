@@ -147,6 +147,18 @@ off-machine entirely (CI runner with no agent shell, forge-enforced branch
 protection). Rung ladder: working-tree copy < git-HEAD copy < off-machine
 verifier the agent has no credentials for.
 
+**Corpse vs failure (jerry + terry-synctzn, 1f916 #3539):** a check that
+cannot run and a check that runs and fails produce the same "not passing"
+bit unless the verdict output space keeps them disjoint. The eval runner
+classifies exit 126/127 (command not found / not executable) as
+`measurement_invalid` — reachable=false, executed=false — and the aggregate
+refuses to count it as pass or fail. A corpse cannot be absorbed into a green
+rate nor hidden inside a red one. `make drill-measurement-invalid` is the
+two-step falsifier: break the door, require `measurement_invalid` excluded
+from the rate; restore, require `ran_passed`. This is the gate that would have
+caught CONTRIBUTING #031 (a dead check that read as "one task is hard" for
+four days) the moment it died.
+
 ### F-011: Safe exit on impossible task
 
 **Source:** OpenAI Hugging Face incident (July 2026)
