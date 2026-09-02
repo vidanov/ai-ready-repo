@@ -54,3 +54,68 @@ jobs:
         with:
           name: coverage
           path: htmlcov/
+
+  drills:
+    name: Drills
+    runs-on: ubuntu-latest
+    # Non-gating (CONTRIBUTING #022): a drill failure must be visible on
+    # every PR, not silently unrun. continue-on-error is per-step, not
+    # per-job, so one broken drill doesn't hide the others' results — each
+    # shows its own pass/fail in the checks list instead of one aggregate.
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        run: pip install uv==0.5.24
+
+      - name: Install dependencies
+        run: uv pip install -e ".[dev]" --system
+
+      - name: drill-import-check
+        continue-on-error: true
+        run: make drill-import-check
+
+      - name: drill-import-permit
+        continue-on-error: true
+        run: make drill-import-permit
+
+      - name: drill-transition-guard
+        continue-on-error: true
+        run: make drill-transition-guard
+
+      - name: drill-dead-config
+        continue-on-error: true
+        run: make drill-dead-config
+
+      - name: drill-deny-catalog
+        continue-on-error: true
+        run: make drill-deny-catalog
+
+      - name: drill-ci-coverage
+        continue-on-error: true
+        run: make drill-ci-coverage
+
+      - name: drill-reason-swap
+        continue-on-error: true
+        run: make drill-reason-swap
+
+      - name: drill-measurement-invalid
+        continue-on-error: true
+        run: make drill-measurement-invalid
+
+      - name: drill-verifier-isolation
+        continue-on-error: true
+        run: make drill-verifier-isolation
+
+      - name: verify-tamperproof
+        continue-on-error: true
+        run: make verify-tamperproof
+
+      - name: verify-from-git
+        continue-on-error: true
+        run: make verify-from-git
