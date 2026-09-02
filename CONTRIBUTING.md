@@ -216,11 +216,12 @@ The repo scores itself 20/20, but the score measures the example domain
 actual deliverable, and not whether the drills/fixtures in `docs/FIXTURES.md`
 ever run anywhere. These items close that gap.
 
-### #022 — Run drills and fixtures in CI
-**Gap:** `drill_ci_coverage.py` classifies every `drill-*` target and `verify-tamperproof` as warn-only, not gating. Zero of them run in any GitHub Actions workflow. Everything in `docs/FIXTURES.md` is proven locally-only and can silently rot (it already had — see `verify_tamperproof.sh`, fixed 2026-08-30, which had been broken since it was written).
+### #022 — Run drills and fixtures in CI ✅ resolved
+**Gap:** `drill_ci_coverage.py` classifies every `drill-*` target and `verify-tamperproof` as warn-only, not gating. Zero of them run in any GitHub Actions workflow. Everything in `docs/FIXTURES.md` is proven locally-only and can silently rot (it already had — see `verify_tamperproof.sh`, fixed 2026-08-30, which had been broken since it was written; `drill-verifier-isolation` was found broken the same way on 2026-09-02).
 **File:** `.github/workflows/ci.yml` (new job) or a new `.github/workflows/drills.yml`
 **Rules:** Non-gating is acceptable (`continue-on-error: true`), but the job must run on every PR so a break is visible, not silent.
 **Verify:** `drill-ci-coverage`'s `DRILL_TARGETS` set all appear in a workflow file; PR checks show a drills job.
+**Resolved:** `drills` job added to `ci.yml`, one `continue-on-error: true` step per target so a single broken drill shows as its own red check rather than an aggregate. `drill-ci-coverage` now reports 11/11 drill targets found in CI.
 
 ### #023 — Lint, typecheck, and test `scripts/`
 **Gap:** `make lint`/`make typecheck`/coverage all scope to `src tests` only. `scripts/` (the actual product: `adopt.py`, `ai_readiness_audit.py`, `run_evals.py`, the drills) gets zero ruff, zero mypy, zero tests. The 100% coverage badge measures the toy `Order` domain, not the tool.
