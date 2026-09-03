@@ -118,6 +118,10 @@ jobs:
         continue-on-error: true
         run: make drill-verifier-isolation
 
+      - name: drill-referent-liveness
+        continue-on-error: true
+        run: make drill-referent-liveness
+
       - name: verify-tamperproof
         continue-on-error: true
         run: make verify-tamperproof
