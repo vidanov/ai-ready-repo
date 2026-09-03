@@ -222,6 +222,9 @@ drill-coverage-floor: ## Prove a green pass rate over a rotting harness is refus
 drill-required-axis: ## Prove a required-but-unexercised axis is rejected, not averaged into a green rate (1f916 #3595)
 	@bash scripts/drill_required_axis.sh
 
+drill-referent-liveness: ## Prove a fixture whose referent drifted away is reported STALE_OR_DRIFTED, not green (gate 3, 1f916 #3357)
+	@bash scripts/drill_referent_liveness.sh
+
 .PHONY: verify-tamperproof
 verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
 	@bash scripts/verify_tamperproof.sh

@@ -1,0 +1,7 @@
+{
+  "verified_at": 1788419932.1735091,
+  "referents": {
+    "dead-guard-detection.yaml": "uv run python scripts/eval_tasks/dead_guard_verify.py",
+    "order-state-transitions.yaml": "make test-unit"
+  }
+}
