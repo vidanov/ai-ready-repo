@@ -267,9 +267,13 @@ def test_unexercised_axis_not_recorded(tmp_path) -> None:
     assert "reason" not in set(r["exercised_axes"])
 
 
-def test_missing_required_axis_rejected_before_scoring(tmp_path) -> None:
+def test_missing_required_axis_rejected_before_scoring(tmp_path, monkeypatch) -> None:
     """Stage 1: a task requires the reason axis but never exercises it. The
     receipt must be rejected as missing_required_axes, NOT scored as a pass."""
+    # Isolate from the ambient working tree (#034): run_task reads the real git
+    # diff via get_diff_stats, so an uncommitted protected-path edit would flip
+    # protected_touched and fail this axis test for a reason outside its body.
+    monkeypatch.setattr(run_evals, "get_diff_stats", lambda: (0, []))
     task = tmp_path / "t.yaml"
     task.write_text(
         'description: "x"\n'
@@ -285,7 +289,9 @@ def test_missing_required_axis_rejected_before_scoring(tmp_path) -> None:
     assert r["verdict"] == run_evals.VERDICT_MEASUREMENT_INVALID
 
 
-def test_all_required_axes_exercised_proceeds_to_scoring(tmp_path) -> None:
+def test_all_required_axes_exercised_proceeds_to_scoring(tmp_path, monkeypatch) -> None:
+    # Isolate from the ambient working tree (#034): see the sibling test above.
+    monkeypatch.setattr(run_evals, "get_diff_stats", lambda: (0, []))
     task = tmp_path / "t.yaml"
     task.write_text(
         'description: "x"\n'
