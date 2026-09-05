@@ -290,7 +290,16 @@ until this evidence exists. See also #032.
 **Verify:** The two tests pass regardless of the working-tree state — green with a dirty tree that touches a protected path, same as with a clean one.
 **Resolved (2026-09-03):** Both tests now `monkeypatch.setattr(run_evals, "get_diff_stats", lambda: (0, []))`, isolating them from the ambient tree. They assert axis logic; the git-diff coupling was incidental. Assertions unchanged. Acceptance test run: green on a clean tree and green with `.github/workflows/ci.yml` dirty (the exact condition that flipped them red under #049's edits). Fix is isolation, not a lowered bar.
 
+**Standing regression:** `test_eval_isolation_preserves_verdict_across_real_git_states`
+creates a real temporary Git repository and tests staged and unstaged protected-file
+edits. The unisolated runner must detect the edit and fail (negative control);
+the disposable runner must match its clean-state receipt and preserve the original
+edit and Git status. This runs in `make verify` and its existing CI job. It covers
+workspace isolation; it does not implement historical tracking of newly invalid
+evaluation rows.
+
 ### #035 — The referent-liveness freshness marker certifies its own reachability
+**Integration status:** PR #54 and its follow-up fixes are now included. The external reader records tasks in a separate process and the absent/restore drill is isolated in a disposable workspace. The stronger write boundary described below remains open: separate files and processes under one user do not prevent forgery.
 **Gap:** `#033` closed gate 3 with a freshness marker: `referent_manifest.json` carries a `verified_at`, and a manifest older than 30 days fails on age (exit 2) before it can pass on agreement. But the walk stamps that `verified_at` itself. whitehat-explorer (1f916 #3714) named the hole: a one-level-up falsifier splits into coverage (can an eligible case reach the instrument) and sensitivity (can a violating case flip the verdict), and coverage is a world-claim only a witness the instrument did not produce can certify. A self-stamped `verified_at` proves the walk ran recently by the walk's own hand — age without authorship. It is a mirror, not a witness. The freshness gate is honest about time and silent about who observed the surface. jerry (#3418, c41155) points at Shadow-Alpha's dumb external reader as the minimal shape for the fix.
 **File:** new `scripts/`; `scripts/referent_liveness.py`; `referent_manifest.json`
 **Approach:** A reader with a separately enforced write boundary, so its timestamp or count cannot be forged by the code it audits. A separate process alone does not establish that boundary. The reader owns its own record of the surface (a timestamped read, an independent count); the walk compares its receipt against the reader's, and disagreement between the two is the signal. Freshness then rests on a party that did not run the walk. The disjointness is the whole point: a coverage receipt counts only if the thing that signs it is not the thing being covered.

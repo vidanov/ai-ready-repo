@@ -45,6 +45,13 @@ install tools, execute the target project, or invent a Jest/ESLint setup. Missin
 commands are listed in `ADOPTION.md`; generated verification fails while setup is
 incomplete. See [the adoption guide](docs/adoption.md).
 
+## Improve with an agent
+
+The reusable [improve-repository skill](skills/improve-repository/SKILL.md) guides
+an agent through evidence-based review and authorized improvements using the
+project's existing tools. It covers integration work that additive adoption cannot
+finish automatically. See [installation and usage](docs/adoption.md#agent-assisted-improvement).
+
 ## What each result means
 
 | Evidence | Meaning |
@@ -68,6 +75,7 @@ tests/unit/                  Toolkit, example, and verification regression tests
 scripts/                     Compatibility entry points, maintenance checks, research drills
 scripts/eval_tasks/           Verification regression tasks and failure fixtures
 ecosystems/                  CDK and Terraform reference scaffolds
+skills/improve-repository/   Reusable agent workflow for repository improvements
 benchmarks/                  Protocol for future comparative agent measurements
 docs/adr/                    Decisions explaining executable constraints
 docs/articles/               Articles and historical research
@@ -84,7 +92,8 @@ fixtures and downstream template users working during the migration.
 ## Checks and drills
 
 `make verify-fast` runs formatting, linting, types, and import contracts.
-`make verify` adds unit tests, coverage, ADR validation, and badge synchronization.
+`make verify` adds unit tests, coverage, ADR validation, badge synchronization,
+and verification-population coverage.
 Formatting and linting include `scripts/`; types cover both source packages.
 `make test-toolkit` reports toolkit coverage separately from the example.
 
@@ -133,3 +142,18 @@ See [the fixture catalog](docs/FIXTURES.md) for the research drills.
 
 The central principle remains: use tools to enforce the rules they can check,
 and keep human and agent guidance focused on the reasoning those tools cannot provide.
+
+### Missing verification checks
+
+`make population-check` enumerates prerequisites of `make verify` from the
+Makefile and compares them with explicit `covers` lists in evaluation tasks.
+Adding a check without a mapping fails with `REFERENT_UNAUTHORED`, even when
+that check is absent from `.PHONY`. A mapping is valid only when the task's
+verification command reaches that target. The check runs through `make verify`
+and therefore through its existing required CI job.
+
+The scope is the literal verification prerequisite graph, not every file or
+business rule in the repository. Coverage declarations establish a mapping;
+`make eval` executes the tasks. Neither proves that tests detect every defect.
+A unit regression adds a check without coverage, requires failure, then adds
+coverage and requires recovery. Source: [walter on population coverage](https://1f916.ai/api/post/3843).

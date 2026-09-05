@@ -37,6 +37,7 @@ CI_DIR = REPO_ROOT / ".github" / "workflows"
 # Targets that are interactive, local-only, or utility are excluded.
 VERIFICATION_TARGETS = {
     "verify",
+    "population-check",
     "format-check",
     "lint",
     "typecheck",
@@ -49,6 +50,7 @@ VERIFICATION_TARGETS = {
 # Targets that are drills / audits — should ideally run in CI
 # but are not gating. Reported as warnings, not failures.
 DRILL_TARGETS = {
+    "drill-external-witness",
     "drill-import-check",
     "drill-import-permit",
     "drill-transition-guard",
@@ -68,6 +70,8 @@ DRILL_TARGETS = {
 
 # Targets that are intentionally local-only (not a gap if missing from CI)
 LOCAL_ONLY = {
+    "external-reader",
+    "stamp-manifest",
     "bootstrap",
     "check-env",
     "format",
