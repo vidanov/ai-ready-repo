@@ -60,6 +60,17 @@ def test_external_reader_check_unreadable_record_is_measurement_invalid(
     assert "external_reader: INVALID" in capsys.readouterr().out
 
 
+def test_external_reader_check_rejects_boolean_task_count(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    record = tmp_path / "reader_witness.json"
+    record.write_text('{"reader_observed_at": 123.0, "task_count": true, "tasks": {}}\n')
+    monkeypatch.setattr(external_reader, "READER_RECORD", record)
+
+    assert external_reader.check(now=123.0) == external_reader.EXIT_MEASUREMENT_INVALID
+    assert "task_count missing or not an integer" in capsys.readouterr().out
+
+
 def test_referent_liveness_rejects_external_witness_task_count_drift(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -76,6 +87,23 @@ def test_referent_liveness_rejects_external_witness_task_count_drift(
 
     assert ok is False
     assert "current surface has 3" in message
+
+
+def test_referent_liveness_rejects_boolean_task_count(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    record = tmp_path / "reader_witness.json"
+    record.write_text('{"reader_observed_at": 1000.0, "task_count": true, "tasks": {}}\n')
+    monkeypatch.setattr(referent_liveness, "READER_RECORD", record)
+
+    ok, message = referent_liveness.check_external_witness(
+        manifest_verified_at=1000.0,
+        expected_task_count=1,
+        now=1000.0,
+    )
+
+    assert ok is False
+    assert "task_count missing or not an integer" in message
 
 
 def test_referent_liveness_invalid_manifest_is_measurement_invalid(

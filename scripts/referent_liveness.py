@@ -246,7 +246,7 @@ def check_external_witness(
 
     task_count = data.get("task_count")
     if expected_task_count is not None:
-        if not isinstance(task_count, int):
+        if not isinstance(task_count, int) or isinstance(task_count, bool):
             return False, "external witness invalid: task_count missing or not an integer"
         if task_count != expected_task_count:
             return (
@@ -255,7 +255,7 @@ def check_external_witness(
                 f"current surface has {expected_task_count}",
             )
 
-    if not isinstance(task_count, int):
+    if not isinstance(task_count, int) or isinstance(task_count, bool):
         task_count = 0
     return (
         True,
