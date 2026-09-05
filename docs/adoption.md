@@ -75,3 +75,24 @@ success, retries, time, or cost; follow [the benchmark protocol](../benchmarks/R
 `--dry-run` and `--detect` remain available. `make adopt REPO=PATH` explicitly
 applies, while `make adopt-dry-run REPO=PATH` previews. Both operate additively.
 `python3 scripts/ai_readiness_audit.py PATH` remains a configuration inventory.
+
+## Agent-assisted improvement
+
+Install the repository-owned skill into your agent's skill directory. For Codex,
+run this from the toolkit checkout (the link keeps the skill tied to this checkout):
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+ln -s "$PWD/skills/improve-repository" "${CODEX_HOME:-$HOME/.codex}/skills/improve-repository"
+```
+
+If that name already exists, inspect it before replacing it. Keep the checkout in
+place while using the link. In a task opened on the target repository, request:
+
+> Use $improve-repository to review this project and implement the most valuable
+> improvements. Preserve its existing tools and verify the changes.
+
+For findings only, ask for a review without edits. The skill can work without the
+toolkit installed. It interprets configuration findings, integrates existing files,
+and checks actual behavior; it does not automatically publish the result. The
+skill's effectiveness has not yet been measured in comparative agent runs.

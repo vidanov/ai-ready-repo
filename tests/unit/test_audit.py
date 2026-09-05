@@ -69,3 +69,30 @@ def test_skip_example_in_a_string_is_not_a_skipped_test(tmp_path: Path) -> None:
     path.write_text("def invalid syntax")
     finding = next(f for f in audit(tmp_path).findings if f.name == "Skipped test ownership")
     assert finding.evidence == "unknown"
+
+
+@pytest.mark.parametrize(
+    "relative", ["src/order.test.ts", "packages/ui/src/view.spec.tsx", "pkg/test_order.py"]
+)
+def test_colocated_tests_are_discovered(tmp_path: Path, relative: str) -> None:
+    test = tmp_path / relative
+    test.parent.mkdir(parents=True)
+    test.write_text("")
+    finding = next(f for f in audit(tmp_path).findings if f.name == "Test files")
+    assert finding.evidence == "configured"
+
+
+def test_dependency_generated_and_symlinked_tests_are_excluded(tmp_path: Path) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    for directory in ("node_modules/pkg", ".venv/lib", "dist", ".git"):
+        test = root / directory / "test_example.py"
+        test.parent.mkdir(parents=True)
+        test.write_text("")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "test_example.py").write_text("")
+    (root / "tests").symlink_to(outside, target_is_directory=True)
+    (root / "test_link.py").symlink_to(outside / "test_example.py")
+    finding = next(f for f in audit(root).findings if f.name == "Test files")
+    assert finding.evidence == "missing"
