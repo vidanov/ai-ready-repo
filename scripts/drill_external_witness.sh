@@ -23,6 +23,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$REPO_ROOT/scripts/drill_workspace.sh"
 cd "$REPO_ROOT"
 
 RECORD="scripts/eval_tasks/reader_witness.json"
