@@ -85,7 +85,7 @@ security: ## Run security scan
 # ── Verification ladder ──────────────────────────────────────────────────────
 
 .PHONY: verify
-verify: format-check lint typecheck import-check test-unit validate-adrs sync-badges-check ## Run complete verification (same as CI)
+verify: format-check lint typecheck import-check test-unit validate-adrs sync-badges-check population-check ## Run complete verification (same as CI)
 	@echo "✓ All checks passed"
 
 .PHONY: verify-fast
@@ -227,3 +227,7 @@ clean: ## Remove generated artefacts
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: population-check
+population-check: ## Reject verification checks without evaluation coverage
+	@uv run python scripts/check_population.py

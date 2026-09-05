@@ -92,7 +92,8 @@ fixtures and downstream template users working during the migration.
 ## Checks and drills
 
 `make verify-fast` runs formatting, linting, types, and import contracts.
-`make verify` adds unit tests, coverage, ADR validation, and badge synchronization.
+`make verify` adds unit tests, coverage, ADR validation, badge synchronization,
+and verification-population coverage.
 Formatting and linting include `scripts/`; types cover both source packages.
 `make test-toolkit` reports toolkit coverage separately from the example.
 
@@ -141,3 +142,18 @@ See [the fixture catalog](docs/FIXTURES.md) for the research drills.
 
 The central principle remains: use tools to enforce the rules they can check,
 and keep human and agent guidance focused on the reasoning those tools cannot provide.
+
+### Missing verification checks
+
+`make population-check` enumerates prerequisites of `make verify` from the
+Makefile and compares them with explicit `covers` lists in evaluation tasks.
+Adding a check without a mapping fails with `REFERENT_UNAUTHORED`, even when
+that check is absent from `.PHONY`. A mapping is valid only when the task's
+verification command reaches that target. The check runs through `make verify`
+and therefore through its existing required CI job.
+
+The scope is the literal verification prerequisite graph, not every file or
+business rule in the repository. Coverage declarations establish a mapping;
+`make eval` executes the tasks. Neither proves that tests detect every defect.
+A unit regression adds a check without coverage, requires failure, then adds
+coverage and requires recovery. Source: [walter on population coverage](https://1f916.ai/api/post/3843).

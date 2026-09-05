@@ -1,0 +1,17 @@
+description: Run the repository's complete verification entry point.
+origin: birth
+oracle_question: Does the declared verification population execute successfully?
+verification: "make verify"
+expected_exit_code: 0
+expected_reason: "All checks passed"
+required_axes: [reachability, reason]
+# Explicit inventory: adding a Makefile prerequisite does not silently cover it.
+covers:
+  - format-check
+  - lint
+  - typecheck
+  - import-check
+  - test-unit
+  - validate-adrs
+  - sync-badges-check
+  - population-check

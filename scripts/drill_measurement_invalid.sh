@@ -19,6 +19,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$REPO_ROOT/scripts/drill_workspace.sh"
 cd "$REPO_ROOT"
 
+BASE_TASKS=(scripts/eval_tasks/*.yaml)
+BASE_COUNT=${#BASE_TASKS[@]}
 TASK="scripts/eval_tasks/_drill_measurement_invalid.yaml"
 cleanup() { rm -f "$TASK"; }
 trap cleanup EXIT
@@ -46,19 +48,11 @@ if ! echo "$OUT" | grep -q "_drill_measurement_invalid: exit 127"; then
 	echo "$OUT"
 	exit 1
 fi
-# The corpse must NOT lower the rate: with two real tasks both passing, the
-# rate must still read 2/2. If the invalid task were folded in, it would read
-# 2/3.
-if ! echo "$OUT" | grep -qE "Eval results: [0-9]+/[0-9]+ passed"; then
-	echo "✗ drill-measurement-invalid FAILED: no rate line found"
-	exit 1
-fi
-RATE_LINE="$(echo "$OUT" | grep -E "Eval results:" | head -1)"
-if echo "$RATE_LINE" | grep -q "/3 passed"; then
-	echo "✗ drill-measurement-invalid FAILED: corpse was counted in the denominator"
-	echo "  $RATE_LINE"
-	echo "  measurement_invalid must be disjoint from pass/fail (1f916 #3539)"
-	exit 1
+# Discover the expected population before planting the invalid row.
+if ! echo "$OUT" | grep -q "Eval results: ${BASE_COUNT}/${BASE_COUNT} passed"; then
+    echo "✗ drill-measurement-invalid FAILED: expected all original tasks in the rate"
+    echo "$OUT"
+    exit 1
 fi
 echo "  ✓ broken door -> measurement_invalid, exit 127, excluded from the rate"
 
@@ -73,7 +67,14 @@ YAML
 
 set +e
 OUT2="$(uv run python scripts/run_evals.py 2>&1)"
+CODE2=$?
 set -e
+RESTORED_COUNT=$((BASE_COUNT + 1))
+if [ "$CODE2" -ne 0 ] || ! echo "$OUT2" | grep -q "Eval results: ${RESTORED_COUNT}/${RESTORED_COUNT} passed"; then
+    echo "✗ drill-measurement-invalid FAILED: restored population did not pass"
+    echo "$OUT2"
+    exit 1
+fi
 if echo "$OUT2" | grep -q "MEASUREMENT_INVALID"; then
 	echo "✗ drill-measurement-invalid FAILED: restored door still read as measurement_invalid"
 	echo "$OUT2"
