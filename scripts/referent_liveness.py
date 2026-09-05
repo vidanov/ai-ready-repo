@@ -71,6 +71,7 @@ READER_RECORD = REPO_ROOT / "scripts" / "eval_tasks" / "reader_witness.json"
 # may be before the gate fails. Generous: they run in the same maintenance
 # window, not in lockstep.
 MAX_WITNESS_DRIFT_SECONDS = 60 * 60 * 24 * 2  # 2 days
+NUMERIC_TYPES = (int, float)
 
 LIVE = "LIVE"
 STALE_OR_DRIFTED = "STALE_OR_DRIFTED"
@@ -177,7 +178,7 @@ def check_freshness(now: float | None = None) -> tuple[bool, str]:
         return False, "no manifest: never verified"
     data = json.loads(MANIFEST.read_text())
     verified_at = data.get("verified_at")
-    if not isinstance(verified_at, int | float):
+    if not isinstance(verified_at, NUMERIC_TYPES):
         return False, "manifest has no numeric verified_at"
     age_days = (now - verified_at) / 86400
     if age_days > MAX_AGE_DAYS:
@@ -220,7 +221,7 @@ def check_external_witness(
         return False, f"external witness unreadable: {exc}"
 
     reader_at = data.get("reader_observed_at")
-    if not isinstance(reader_at, int | float):
+    if not isinstance(reader_at, NUMERIC_TYPES):
         return False, "external witness invalid: reader_observed_at missing or not numeric"
 
     reader_age = now - reader_at
