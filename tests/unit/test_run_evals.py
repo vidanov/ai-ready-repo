@@ -319,3 +319,49 @@ def test_aggregate_excludes_missing_axis_from_rate() -> None:
     assert agg.total == 1  # missing-axis row is out of the pass/fail denominator
     assert agg.rate == 1.0
     assert agg.coverage == 0.5  # but it counts against coverage
+
+
+def _cli_fixture(tmp_path, monkeypatch, command="false", baseline=False):
+    tasks = tmp_path / "tasks"
+    tasks.mkdir()
+    (tasks / "check.yaml").write_text(
+        f'description: Check\nverification: "{command}"\nexpected_exit_code: 0\norigin: birth\n'
+    )
+    baseline_file = tmp_path / "baseline.json"
+    monkeypatch.setattr(run_evals, "TASKS_DIR", tasks)
+    monkeypatch.setattr(run_evals, "BASELINE_FILE", baseline_file)
+    monkeypatch.setattr(run_evals, "get_diff_stats", lambda: (0, []))
+    monkeypatch.setattr(run_evals, "count_tests_disabled_in_diff", lambda: 0)
+    monkeypatch.setattr(sys, "argv", ["run_evals.py"] + (["--baseline"] if baseline else []))
+    return baseline_file
+
+
+def test_cli_failing_task_without_baseline_fails(tmp_path, monkeypatch):
+    _cli_fixture(tmp_path, monkeypatch)
+    assert run_evals.main() == 1
+
+
+def test_cli_failed_run_cannot_replace_baseline(tmp_path, monkeypatch):
+    baseline = _cli_fixture(tmp_path, monkeypatch, baseline=True)
+    original = '{"success_rate": 1.0, "tasks": 1}'
+    baseline.write_text(original)
+    assert run_evals.main() == 1
+    assert baseline.read_text() == original
+
+
+def test_cli_invalid_measurement_cannot_create_baseline(tmp_path, monkeypatch):
+    baseline = _cli_fixture(tmp_path, monkeypatch, command="exit 127", baseline=True)
+    assert run_evals.main() == 1
+    assert not baseline.exists()
+
+
+def test_cli_success_can_create_baseline(tmp_path, monkeypatch):
+    baseline = _cli_fixture(tmp_path, monkeypatch, command="true", baseline=True)
+    assert run_evals.main() == 0
+    assert baseline.exists()
+
+
+def test_cli_missing_tasks_fails(tmp_path, monkeypatch):
+    _cli_fixture(tmp_path, monkeypatch)
+    monkeypatch.setattr(run_evals, "TASKS_DIR", tmp_path / "missing")
+    assert run_evals.main() == 1
