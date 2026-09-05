@@ -1,46 +1,46 @@
+TRUSTED_REF ?= HEAD
+
 .DEFAULT_GOAL := help
 
 # ── Bootstrap ────────────────────────────────────────────────────────────────
 
 .PHONY: bootstrap
 bootstrap: ## Set up a fresh development environment from scratch
-	@echo "→ Creating virtual environment..."
-	uv venv
-	@echo "→ Installing dependencies..."
-	uv pip install -e ".[dev]"
+	@echo "→ Installing the locked development environment..."
+	uv sync --frozen --all-extras
 	@echo "→ Copying .env.example → .env (if not present)..."
 	@test -f .env || cp .env.example .env
 	@echo "→ Wiring versioned git hooks (.githooks/)..."
 	@git config core.hooksPath .githooks
-	@echo "→ Bootstrap complete. Activate with: source .venv/bin/activate"
+	@echo "→ Bootstrap complete. Commands run through uv; activation is optional."
 	@echo "→ Verify with: make check-env"
 
 .PHONY: check-env
 check-env: ## Verify the environment is correctly set up
-	@echo "→ Python: $$(python --version)"
+	@uv run python --version
 	@echo "→ uv: $$(uv --version)"
-	@python3 -c "import ai_ready_repo; print('→ Package importable: ok')"
+	@uv run python -c "import ai_ready, ai_ready_repo; print('→ Toolkit and example importable: ok')"
 	@echo "→ Environment check passed"
 
 # ── Formatting ───────────────────────────────────────────────────────────────
 
 .PHONY: format
 format: ## Auto-format all source files
-	uv run ruff format src tests
+	uv run ruff format src tests scripts
 
 .PHONY: format-check
 format-check: ## Check formatting without modifying files
-	uv run ruff format --check src tests
+	uv run ruff format --check src tests scripts
 
 # ── Linting ──────────────────────────────────────────────────────────────────
 
 .PHONY: lint
 lint: ## Run linter
-	uv run ruff check src tests
+	uv run ruff check src tests scripts
 
 .PHONY: lint-fix
 lint-fix: ## Run linter and apply safe auto-fixes
-	uv run ruff check --fix src tests
+	uv run ruff check --fix src tests scripts
 
 # ── Type checking ────────────────────────────────────────────────────────────
 
@@ -63,6 +63,10 @@ test: ## Run all tests
 .PHONY: test-unit
 test-unit: ## Run unit tests only (with coverage enforcement)
 	uv run pytest tests/unit -v --cov=src --cov-report=term-missing --cov-report=html
+
+.PHONY: test-toolkit
+test-toolkit: ## Test reusable tooling with its own coverage floor
+	uv run pytest tests/unit/test_adoption.py tests/unit/test_audit.py tests/unit/test_toolkit_cli.py tests/unit/test_verification.py --cov=ai_ready --cov-report=term-missing
 
 .PHONY: test-integration
 test-integration: ## Run integration tests only (requires services)
@@ -102,20 +106,20 @@ audit: ## Run AI-readiness audit on this repository
 
 .PHONY: audit-repo
 audit-repo: ## Run AI-readiness audit on another repo (usage: make audit-repo REPO=/path/to/repo)
-	@python3 scripts/ai_readiness_audit.py $(REPO)
+	@python3 scripts/ai_readiness_audit.py "$(REPO)"
 
 .PHONY: adopt
 adopt: ## Generate AI-readiness scaffold in another repo (usage: make adopt REPO=/path/to/repo)
-	@python3 scripts/adopt.py $(REPO)
+	@python3 scripts/adopt.py "$(REPO)" --apply
 
 .PHONY: adopt-dry-run
 adopt-dry-run: ## Show what adopt would generate without writing files (usage: make adopt-dry-run REPO=/path/to/repo)
-	@python3 scripts/adopt.py $(REPO) --dry-run
+	@python3 scripts/adopt.py "$(REPO)" --dry-run
 
 # ── Badge sync ───────────────────────────────────────────────────────────────
 
 .PHONY: sync-badges
-sync-badges: ## Recompute README's Open Items badge from CONTRIBUTING.md and fix it in place
+sync-badges: ## Recompute README's Open Items badge from docs/backlog.md and fix it in place
 	@python3 scripts/sync_readme_badges.py
 
 .PHONY: sync-badges-check
@@ -131,47 +135,14 @@ lint-changed: ## Lint only files changed since last commit
 # ── Drills — prove gates can convict ─────────────────────────────────────────
 
 .PHONY: drill-import-check
-drill-import-check: ## Prove the import boundary gate fires on a real violation
-	@echo "→ Planting a known forbidden import (infrastructure → domain bypass via application)..."
-	@echo "from ai_ready_repo.infrastructure import InMemoryOrderRepository" >> src/ai_ready_repo/domain/__init__.py
-	@echo "→ Running import-check (must reject the planted violation)..."
-	@trap 'git checkout src/ai_ready_repo/domain/__init__.py 2>/dev/null' EXIT; \
-	OUTPUT=$$(uv run lint-imports 2>&1); \
-	RC=$$?; \
-	if [ $$RC -eq 0 ]; then \
-		echo "✗ drill-import-check FAILED: gate did not fire — check is miswired"; \
-		exit 1; \
-	fi; \
-	if ! echo "$$OUTPUT" | grep -q "ai_ready_repo.domain"; then \
-		echo "✗ drill-import-check FAILED: gate exited nonzero but did not name the planted module"; \
-		echo "  Output was:"; \
-		echo "$$OUTPUT" | head -5; \
-		exit 1; \
-	fi; \
-	if ! echo "$$OUTPUT" | grep -q "ai_ready_repo.infrastructure"; then \
-		echo "✗ drill-import-check FAILED: gate exited nonzero but did not name the forbidden dependency"; \
-		echo "  Output was:"; \
-		echo "$$OUTPUT" | head -5; \
-		exit 1; \
-	fi; \
-	echo "✓ drill-import-check passed: gate rejected the violation and named the forbidden edge"
+drill-import-check: ## Check import boundaries in a disposable workspace
+	@uv run python -m ai_ready.verification.sandbox . python scripts/drill_imports.py deny
+
 
 .PHONY: drill-import-permit
-drill-import-permit: ## Prove the import boundary gate permits a legal cross-layer import
-	@echo "→ Planting a legal import (application → domain, which the contract permits)..."
-	@echo "from ai_ready_repo.domain import Order" >> src/ai_ready_repo/application/__init__.py
-	@echo "→ Running import-check (must exit zero — this import is allowed)..."
-	@trap 'git checkout src/ai_ready_repo/application/__init__.py 2>/dev/null' EXIT; \
-	OUTPUT=$$(uv run lint-imports 2>&1); \
-	RC=$$?; \
-	if [ $$RC -ne 0 ]; then \
-		echo "✗ drill-import-permit FAILED: gate rejected a legal import"; \
-		echo "  A linter that rejects valid imports is as broken as one that misses violations."; \
-		echo "  Output was:"; \
-		echo "$$OUTPUT" | head -5; \
-		exit 1; \
-	fi; \
-	echo "✓ drill-import-permit passed: gate permitted the legal cross-layer import"
+drill-import-permit: ## Check import boundaries in a disposable workspace
+	@uv run python -m ai_ready.verification.sandbox . python scripts/drill_imports.py permit
+
 
 .PHONY: drill-transition-guard
 drill-transition-guard: ## Prove the Order.transition() guard fires on an invalid transition
@@ -193,24 +164,9 @@ drill-ci-coverage: ## Verify every verification target runs in CI (no monitoring
 	@uv run python scripts/drill_ci_coverage.py
 
 .PHONY: drill-reason-swap
-drill-reason-swap: ## Prove drill assertions test the specific violation, not just any failure	@echo "→ Testing that drill-import-check's reason assertion discriminates..."
-	@echo "→ Injecting a SYNTAX error (not an import violation) into domain..."
-	@echo "this is not valid python" >> src/ai_ready_repo/domain/__init__.py
-	@trap 'git checkout src/ai_ready_repo/domain/__init__.py 2>/dev/null' EXIT; \
-	OUTPUT=$$(uv run lint-imports 2>&1); \
-	RC=$$?; \
-	if [ $$RC -eq 0 ]; then \
-		echo "✓ linter did not fire on syntax error (exits zero) — reason-swap not applicable"; \
-		exit 0; \
-	fi; \
-	if echo "$$OUTPUT" | grep -q "ai_ready_repo.infrastructure"; then \
-		echo "✗ drill-reason-swap FAILED: linter reported an import violation on a syntax-only error"; \
-		echo "  The reason assertion would pass on the wrong failure class."; \
-		echo "  Output was:"; \
-		echo "$$OUTPUT" | head -5; \
-		exit 1; \
-	fi; \
-	echo "✓ drill-reason-swap passed: syntax error produces different output than import violation"
+drill-reason-swap: ## Check import boundaries in a disposable workspace
+	@uv run python -m ai_ready.verification.sandbox . python scripts/drill_imports.py reason
+
 
 .PHONY: drill-measurement-invalid
 drill-measurement-invalid: ## Prove the eval gate treats a corpse (unrun check) as distinct from a failure (1f916 #3539)
@@ -237,49 +193,24 @@ stamp-manifest: ## Stamp referent_manifest.json with verified_at=now (run after 
 drill-external-witness: ## Prove freshness gate fails when the external reader's record is absent (#035, whitehat-explorer 1f916 #3714)
 	@bash scripts/drill_external_witness.sh
 
-.PHONY: verify-tamperproof
-verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
+.PHONY: verify-snapshot
+verify-snapshot: ## Verify a snapshot taken at invocation time (does not protect prior edits)
 	@bash scripts/verify_tamperproof.sh
+
+.PHONY: verify-tamperproof
+verify-tamperproof: verify-snapshot ## Compatibility alias for verify-snapshot
 
 .PHONY: verify-from-git
 verify-from-git: ## Run unit tests from the committed copy at HEAD, not the working tree
-	@bash scripts/verify_from_git.sh
+	@bash scripts/verify_from_git.sh "$(TRUSTED_REF)"
 
 .PHONY: drill-verifier-isolation
-drill-verifier-isolation: ## Prove the verifier reads from outside the agent's write path (credit: hermes-voyager, 1f916 #3385)
-	@echo "→ The property under test: an uncommitted edit to a test file must NOT"
-	@echo "  change the verdict of a verifier that sources tests from git HEAD."
-	@echo "→ Planting a weakened assertion into the working-tree test file..."
-	@# Replace a real assertion with one that can never fail. A verifier that
-	@# reads the working tree would accept this; one reading git HEAD ignores it.
-	@printf '\n\ndef test_planted_always_passes() -> None:\n    assert True  # planted by drill-verifier-isolation\n' >> tests/unit/test_domain_order.py
-	@# Also weaken an existing assertion so the working tree is genuinely tampered.
-	@python3 -c "import pathlib; p = pathlib.Path('tests/unit/test_domain_order.py'); t = p.read_text(); p.write_text(t.replace('assert order.customer_id == \"cust-1\"', 'assert order.customer_id == order.customer_id  # weakened by drill'))"
-	@trap 'git checkout tests/unit/test_domain_order.py 2>/dev/null' EXIT; \
-	echo "→ [1/2] Working-tree pytest sees the weakened file (control)..."; \
-	if ! grep -q "weakened by drill" tests/unit/test_domain_order.py; then \
-		echo "✗ drill-verifier-isolation FAILED: could not plant the tamper"; \
-		exit 1; \
-	fi; \
-	echo "  ✓ working tree is tampered (assertion weakened, dummy test added)"; \
-	echo "→ [2/2] Git-sourced verifier must ignore the working-tree edit..."; \
-	OUTPUT=$$(bash scripts/verify_from_git.sh 2>&1); \
-	RC=$$?; \
-	if [ $$RC -ne 0 ]; then \
-		echo "✗ drill-verifier-isolation FAILED: git-sourced verifier errored"; \
-		echo "$$OUTPUT" | tail -10; \
-		exit 1; \
-	fi; \
-	if echo "$$OUTPUT" | grep -q "test_planted_always_passes"; then \
-		echo "✗ drill-verifier-isolation FAILED: verifier picked up the PLANTED test"; \
-		echo "  This means it read the working tree, not git HEAD — inside the write path."; \
-		exit 1; \
-	fi; \
-	echo "  ✓ verifier ran the committed tests; the planted test is absent from its run"; \
-	echo "✓ drill-verifier-isolation passed: the checker is outside the agent's uncommitted write path"
+drill-verifier-isolation: ## Prove committed tests ignore edits in an isolated workspace
+	@bash scripts/drill_verifier_isolation.sh
+
 
 .PHONY: eval
-eval: ## Run agent evaluation tasks against this repo
+eval: ## Run verification regression tasks (does not launch agents)
 	@python3 scripts/run_evals.py
 
 # ── Utilities ────────────────────────────────────────────────────────────────

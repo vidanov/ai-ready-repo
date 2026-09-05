@@ -13,6 +13,10 @@ All `Order` status changes MUST use `Order.transition(new_status)`.
 
 Code MUST NOT assign `order.status = ...` directly.
 
+The public `status` property has no setter. The private `_status` field is
+updated only by `transition()`. This protects the public API from accidental
+bypasses; Python private attributes are not a security boundary.
+
 ## Reasons
 
 - Direct assignment bypasses the transition table and allows impossible states

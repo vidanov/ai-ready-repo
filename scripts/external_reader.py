@@ -74,6 +74,7 @@ EXIT_MEASUREMENT_INVALID = 3
 # this many seconds. Generous: the reader and runner need not run in lockstep,
 # only within the same maintenance window.
 MAX_DRIFT_SECONDS = 60 * 60 * 24 * 2  # 2 days
+NUMERIC_TYPES = (int, float)
 
 
 def _read_tasks() -> dict[str, str]:
@@ -108,25 +109,21 @@ def record(now: float | None = None) -> int:
     now = now if now is not None else time.time()
     try:
         tasks = _read_tasks()
+        READER_RECORD.write_text(
+            json.dumps(
+                {
+                    "reader_observed_at": now,
+                    "task_count": len(tasks),
+                    "tasks": tasks,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
     except (FileNotFoundError, OSError) as exc:
         print(f"MEASUREMENT_INVALID: {exc}")
         return EXIT_MEASUREMENT_INVALID
-
-    READER_RECORD.write_text(
-        json.dumps(
-            {
-                "reader_observed_at": now,
-                "task_count": len(tasks),
-                "tasks": tasks,
-            },
-            indent=2,
-        )
-        + "\n"
-    )
-    print(
-        f"external_reader: recorded {len(tasks)} task(s) at "
-        f"reader_observed_at={now:.0f}"
-    )
+    print(f"external_reader: recorded {len(tasks)} task(s) at reader_observed_at={now:.0f}")
     for name, verification in tasks.items():
         print(f"  {name}: {verification!r}")
     print(f"\nRecord written to: {READER_RECORD}")
@@ -148,9 +145,13 @@ def check(now: float | None = None) -> int:
         )
         return EXIT_STALE_OR_ABSENT
 
-    data = json.loads(READER_RECORD.read_text())
+    try:
+        data = json.loads(READER_RECORD.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        print(f"external_reader: INVALID — unreadable reader_witness.json: {exc}")
+        return EXIT_MEASUREMENT_INVALID
     observed_at = data.get("reader_observed_at")
-    if not isinstance(observed_at, int | float):
+    if not isinstance(observed_at, NUMERIC_TYPES):
         print("external_reader: INVALID — reader_observed_at missing or not numeric")
         return EXIT_MEASUREMENT_INVALID
 
@@ -162,11 +163,11 @@ def check(now: float | None = None) -> int:
         )
         return EXIT_STALE_OR_ABSENT
 
-    count = data.get("task_count", 0)
-    print(
-        f"external_reader: FRESH — {count} task(s), "
-        f"recorded {age / 3600:.1f}h ago"
-    )
+    count = data.get("task_count")
+    if not isinstance(count, int) or isinstance(count, bool):
+        print("external_reader: INVALID — task_count missing or not an integer")
+        return EXIT_MEASUREMENT_INVALID
+    print(f"external_reader: FRESH — {count} task(s), recorded {age / 3600:.1f}h ago")
     return EXIT_OK
 
 

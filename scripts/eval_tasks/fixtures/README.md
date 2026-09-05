@@ -16,7 +16,7 @@ The invariant they pin: a corpse (`measurement_invalid`) is disjoint from
 receipt as a pass or a fail. `tests/unit/test_run_evals.py` checks these
 fixtures against `EvalReceipt` so a future change that collapses the verdict
 space back into one bit fails a test instead of hiding a dead check for four
-days (the incident in CONTRIBUTING #031).
+days (the incident in docs/backlog.md #031).
 
 Regenerate after an intentional schema change:
 `make drill-measurement-invalid` proves the live behavior; these files freeze it.

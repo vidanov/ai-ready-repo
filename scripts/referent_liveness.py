@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate 3: referent liveness on the deployed surface (CONTRIBUTING #033).
+"""Gate 3: referent liveness on the deployed surface (docs/backlog.md #033).
 
 kilmon-ai (1f916 #3357 c37040) named three gates a fixture check must pass:
 coverage (gate 1), reason discrimination (gate 2, drill-reason-swap), and
@@ -71,6 +71,7 @@ READER_RECORD = REPO_ROOT / "scripts" / "eval_tasks" / "reader_witness.json"
 # may be before the gate fails. Generous: they run in the same maintenance
 # window, not in lockstep.
 MAX_WITNESS_DRIFT_SECONDS = 60 * 60 * 24 * 2  # 2 days
+NUMERIC_TYPES = (int, float)
 
 LIVE = "LIVE"
 STALE_OR_DRIFTED = "STALE_OR_DRIFTED"
@@ -177,7 +178,7 @@ def check_freshness(now: float | None = None) -> tuple[bool, str]:
         return False, "no manifest: never verified"
     data = json.loads(MANIFEST.read_text())
     verified_at = data.get("verified_at")
-    if not isinstance(verified_at, int | float):
+    if not isinstance(verified_at, NUMERIC_TYPES):
         return False, "manifest has no numeric verified_at"
     age_days = (now - verified_at) / 86400
     if age_days > MAX_AGE_DAYS:
@@ -186,7 +187,9 @@ def check_freshness(now: float | None = None) -> tuple[bool, str]:
 
 
 def check_external_witness(
-    manifest_verified_at: float | None, now: float | None = None
+    manifest_verified_at: float | None,
+    expected_task_count: int | None = None,
+    now: float | None = None,
 ) -> tuple[bool, str]:
     """Compare the runner's manifest against the external reader's record (#035).
 
@@ -218,7 +221,7 @@ def check_external_witness(
         return False, f"external witness unreadable: {exc}"
 
     reader_at = data.get("reader_observed_at")
-    if not isinstance(reader_at, int | float):
+    if not isinstance(reader_at, NUMERIC_TYPES):
         return False, "external witness invalid: reader_observed_at missing or not numeric"
 
     reader_age = now - reader_at
@@ -241,7 +244,19 @@ def check_external_witness(
                 f"Re-run both: make stamp-manifest && uv run python scripts/external_reader.py",
             )
 
-    task_count = data.get("task_count", 0)
+    task_count = data.get("task_count")
+    if expected_task_count is not None:
+        if not isinstance(task_count, int) or isinstance(task_count, bool):
+            return False, "external witness invalid: task_count missing or not an integer"
+        if task_count != expected_task_count:
+            return (
+                False,
+                f"external witness drifted: reader saw {task_count} task(s), "
+                f"current surface has {expected_task_count}",
+            )
+
+    if not isinstance(task_count, int) or isinstance(task_count, bool):
+        task_count = 0
     return (
         True,
         f"external witness present: {task_count} task(s), "
@@ -297,7 +312,11 @@ def main(argv: list[str]) -> int:
         print("\n✓ all referents live — manifest stamped verified_at=now")
         return EXIT_OK
 
-    fresh, msg = check_freshness()
+    try:
+        fresh, msg = check_freshness()
+    except (json.JSONDecodeError, OSError) as exc:
+        print(f"\nMEASUREMENT_INVALID: {exc}")
+        return EXIT_MEASUREMENT_INVALID
     print(f"\n{msg}")
     if not fresh:
         print(
@@ -311,9 +330,16 @@ def main(argv: list[str]) -> int:
     # this same process. That is age without authorship -- a mirror. Compare
     # against the reader's independent record. If absent or stale, the only
     # freshness evidence is the runner's own word.
-    manifest_data = json.loads(MANIFEST.read_text()) if MANIFEST.is_file() else {}
+    try:
+        manifest_data = json.loads(MANIFEST.read_text()) if MANIFEST.is_file() else {}
+    except (json.JSONDecodeError, OSError) as exc:
+        print(f"MEASUREMENT_INVALID: {exc}")
+        return EXIT_MEASUREMENT_INVALID
     manifest_verified_at = manifest_data.get("verified_at")
-    witness_ok, witness_msg = check_external_witness(manifest_verified_at)
+    witness_ok, witness_msg = check_external_witness(
+        manifest_verified_at,
+        expected_task_count=len(results),
+    )
     print(witness_msg)
     if not witness_ok:
         print(

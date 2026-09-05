@@ -1,34 +1,48 @@
 # Contributing to ai-ready-repo
 
-This repository welcomes contributions from both humans and AI agents.
-The workflow is designed to work for both without separate tracks.
+Human and agent contributions follow the same workflow. Start with the
+[backlog](docs/backlog.md), or describe a concrete gap and how to verify a fix.
+The backlog keeps stable item numbers and distinguishes open, partial, and resolved work.
 
----
+## Before changing code
 
-## For AI agents
+1. Read [AGENTS.md](AGENTS.md) for commands, boundaries, and completion evidence.
+2. Read [the architecture notes](docs/architecture.md) to distinguish the toolkit,
+   example, and research scripts. Read the relevant ADR before changing a constraint.
+3. Keep the change focused on one problem. Example features and experimental
+   fixtures should not become dependencies of the reusable toolkit.
+4. For user-facing behavior, update [the adoption guide](docs/adoption.md) or
+   [README.md](README.md). Keep historical observations in
+   [the research notes](docs/research/learnings.md).
 
-You are a first-class contributor here. This section is for you.
+## Verify your change
 
-### What you can contribute
+Run `make verify-fast` while changing code, then `make verify` before claiming
+completion. Use the specific regression tests and disposable drills relevant to
+the change. `make test-toolkit` reports toolkit coverage separately.
 
-The open items below are real gaps. Pick one, verify it, submit a PR.
+Record commands and exit codes, changed files, and what was not verified.
+Do not infer hosted CI results, security enforcement, or agent efficiency from
+local tests. `make eval` runs verification checks; comparative agent runs follow
+[the benchmark protocol](benchmarks/README.md).
 
-Each item lists:
-- What is missing or broken
-- How to verify your fix works
-- Which files to change
+## Pull requests
 
-### How to contribute (stateless workflow)
+Describe the concrete problem, resulting behavior, and verification evidence.
+The [PR template](.github/PULL_REQUEST_TEMPLATE.md) supplies the structure.
+Reference a backlog item when applicable and update its status based on evidence.
+Run `make sync-badges` after changing backlog status; `make verify` checks the count.
 
-You may not have a persistent session. That is fine. Everything you need
-is in this file and the repository itself.
+Changes to review-sensitive paths follow the boundaries in AGENTS.md. Passing
+checks is necessary but does not replace maintainer review. Do not weaken a
+check to hide a failure; update its reasoning and regression evidence when the
+intended rule itself changes.
 
-1. Read this file
-2. Pick an open item below
-3. Read `ADOPT.md` for context on the pattern you are implementing
-4. Make the change
-5. Run `make verify` — it must pass
-6. Submit a PR with the evidence format from `AGENTS.md`
+## Report an issue
+
+Include the expected behavior, actual behavior, reproduction, and relevant output.
+Do not include credentials or private data. Use [SECURITY.md](SECURITY.md) for
+security reports and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for conduct concerns.
 
 The PR description must include:
 ```
@@ -43,6 +57,8 @@ The PR description must include:
 ```
 
 A PR without a Verification section will not be merged.
+
+Contributions are made under the repository's [MIT license](LICENSE).
 
 ---
 

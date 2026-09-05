@@ -13,6 +13,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$REPO_ROOT/scripts/drill_workspace.sh"
 cd "$REPO_ROOT"
 
 TASK="scripts/eval_tasks/_drill_required_axis.yaml"
