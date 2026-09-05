@@ -33,7 +33,7 @@ def verify(root: Path, timeout: int = 120) -> Receipt:
         raise ValueError("Timeout must be positive")
     if not root.is_dir():
         raise ValueError(f"Not a directory: {root}")
-    command = ("make", "verify")
+    command = ("make", "--no-print-directory", "verify")
     start = time.monotonic()
     try:
         result = run(command, cwd=root, timeout=timeout)

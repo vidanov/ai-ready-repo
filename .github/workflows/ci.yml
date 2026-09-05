@@ -101,6 +101,18 @@ jobs:
         continue-on-error: true
         run: make drill-referent-liveness
 
+      - name: external-reader (produce witness record for drill-external-witness)
+        continue-on-error: true
+        run: make external-reader
+
+      - name: stamp-manifest (after external-reader)
+        continue-on-error: true
+        run: make stamp-manifest
+
+      - name: drill-external-witness
+        continue-on-error: true
+        run: make drill-external-witness
+
       - name: verify-tamperproof
         continue-on-error: true
         run: make verify-tamperproof
