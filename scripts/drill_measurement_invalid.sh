@@ -9,13 +9,14 @@
 #
 # This proves two things a single pass rate cannot: that the gate can detect a
 # corpse (a check that never ran), and that the recovery path is live. It is the
-# executable form of the incident in CONTRIBUTING #031 — a dead check that read
+# executable form of the incident in docs/backlog.md #031 — a dead check that read
 # as "one task is hard" for four days because 127 and a real failure shared one
 # bit.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$REPO_ROOT/scripts/drill_workspace.sh"
 cd "$REPO_ROOT"
 
 TASK="scripts/eval_tasks/_drill_measurement_invalid.yaml"

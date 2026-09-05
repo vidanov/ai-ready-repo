@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Keep README.md's Open Items badge in sync with CONTRIBUTING.md.
+"""Keep README.md's Open Items badge in sync with docs/backlog.md.
 
 The badge drifted stale twice in one week (fixed manually in PR #35, then
 again after this script's first version) because nothing recomputed it when
-CONTRIBUTING.md gained or resolved an item. This makes it self-correcting
+docs/backlog.md gained or resolved an item. This makes it self-correcting
 instead of relying on someone noticing.
 
-Counts "### #NNN" headings in CONTRIBUTING.md, subtracts headings whose own
+Counts "### #NNN" headings in docs/backlog.md, subtracts headings whose own
 line contains "resolved" (case-insensitive — items have used both
 "✅ resolved" and "(RESOLVED 2026-09-01)"), and rewrites the Open Items
 badge in README.md to match. A resolved-word match elsewhere in an item's
@@ -23,14 +23,14 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
-CONTRIBUTING = REPO_ROOT / "CONTRIBUTING.md"
+BACKLOG = REPO_ROOT / "docs/backlog.md"
 README = REPO_ROOT / "README.md"
 
 HEADING_RE = re.compile(r"^### #\d+.*$", re.MULTILINE)
 BADGE_RE = re.compile(
     r"\[!\[Open Items: \d+\]"
     r"\(https://img\.shields\.io/badge/open_items-\d+-purple\.svg\)\]"
-    r"\(CONTRIBUTING\.md\)"
+    r"\(docs/backlog\.md\)"
 )
 
 
@@ -44,14 +44,14 @@ def badge_text(open_count: int) -> str:
     return (
         f"[![Open Items: {open_count}]"
         f"(https://img.shields.io/badge/open_items-{open_count}-purple.svg)]"
-        f"(CONTRIBUTING.md)"
+        f"(docs/backlog.md)"
     )
 
 
 def main() -> int:
     check_only = "--check" in sys.argv
 
-    open_count = count_open_items(CONTRIBUTING.read_text())
+    open_count = count_open_items(BACKLOG.read_text())
     expected = badge_text(open_count)
 
     readme_text = README.read_text()
@@ -67,7 +67,7 @@ def main() -> int:
     if check_only:
         print(
             f"Open Items badge stale: README has '{match.group(0)}', "
-            f"CONTRIBUTING.md currently has {open_count} open. "
+            f"docs/backlog.md currently has {open_count} open. "
             f"Run `make sync-badges` to fix.",
             file=sys.stderr,
         )

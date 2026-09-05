@@ -3,7 +3,7 @@
 # (done automatically by `make bootstrap`) so it's shared across clones
 # instead of living only in .git/hooks (which git never tracks).
 #
-# Currently: keeps README.md's Open Items badge in sync with CONTRIBUTING.md
+# Currently: keeps README.md's Open Items badge in sync with docs/backlog.md
 # and re-stages README.md if it had to fix it. See scripts/sync_readme_badges.py
 # for why this exists — the badge went stale twice before this was written.
 set -euo pipefail
@@ -11,7 +11,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-if git diff --cached --name-only | grep -q '^CONTRIBUTING\.md$'; then
+if git diff --cached --name-only | grep -q '^docs/backlog\.md$'; then
     python3 scripts/sync_readme_badges.py
     git add README.md
 fi

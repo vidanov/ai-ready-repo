@@ -114,9 +114,7 @@ def drill_golden_parity(catalog: list[DenyRule]) -> list[str]:
 
     # Check counts
     if len(golden) != len(catalog):
-        errors.append(
-            f"Count mismatch: golden has {len(golden)}, catalog has {len(catalog)}"
-        )
+        errors.append(f"Count mismatch: golden has {len(golden)}, catalog has {len(catalog)}")
 
     # Check each golden rule exists in catalog with matching fields
     for gid, g in golden_by_id.items():
@@ -146,9 +144,7 @@ def drill_additive_only() -> list[str]:
     if catalog:
         try:
             resolve_effective(catalog, removals=[catalog[0].id])
-            errors.append(
-                f"resolve_effective accepted removal of baseline rule {catalog[0].id}"
-            )
+            errors.append(f"resolve_effective accepted removal of baseline rule {catalog[0].id}")
         except ValueError:
             pass  # expected
 
@@ -194,9 +190,7 @@ def drill_patterns_fire() -> list[str]:
                 fired = True
                 break
         if not fired:
-            errors.append(
-                f"Category {category}: no pattern matched any probe command"
-            )
+            errors.append(f"Category {category}: no pattern matched any probe command")
 
     return errors
 
