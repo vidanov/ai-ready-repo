@@ -6,7 +6,7 @@
 [![Coverage 100% (example domain)](https://img.shields.io/badge/coverage-100%25_(example_domain)-brightgreen.svg)](htmlcov/index.html)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Fixtures: 8](https://img.shields.io/badge/fixtures-8_types-orange.svg)](docs/FIXTURES.md)
-[![Open Items: 30](https://img.shields.io/badge/open_items-30-purple.svg)](CONTRIBUTING.md)
+[![Open Items: 29](https://img.shields.io/badge/open_items-29-purple.svg)](CONTRIBUTING.md)
 [![Ecosystems: 3](https://img.shields.io/badge/ecosystems-3_(+10_planned)-teal.svg)](docs/ECOSYSTEMS.md)
 
 Make your AI coding agents faster, cheaper, and more reliable.

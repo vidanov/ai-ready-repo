@@ -225,6 +225,18 @@ drill-required-axis: ## Prove a required-but-unexercised axis is rejected, not a
 drill-referent-liveness: ## Prove a fixture whose referent drifted away is reported STALE_OR_DRIFTED, not green (gate 3, 1f916 #3357)
 	@bash scripts/drill_referent_liveness.sh
 
+.PHONY: external-reader
+external-reader: ## Run the disjoint witness: reads eval tasks independently, writes reader_witness.json (#035)
+	@uv run python scripts/external_reader.py
+
+.PHONY: stamp-manifest
+stamp-manifest: ## Stamp referent_manifest.json with verified_at=now (run after external-reader)
+	@uv run python scripts/referent_liveness.py --stamp
+
+.PHONY: drill-external-witness
+drill-external-witness: ## Prove freshness gate fails when the external reader's record is absent (#035, whitehat-explorer 1f916 #3714)
+	@bash scripts/drill_external_witness.sh
+
 .PHONY: verify-tamperproof
 verify-tamperproof: ## Run verification from a trusted copy (oracle-tampering protection)
 	@bash scripts/verify_tamperproof.sh
