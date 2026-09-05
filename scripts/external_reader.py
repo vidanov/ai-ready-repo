@@ -163,7 +163,10 @@ def check(now: float | None = None) -> int:
         )
         return EXIT_STALE_OR_ABSENT
 
-    count = data.get("task_count", 0)
+    count = data.get("task_count")
+    if not isinstance(count, int) or isinstance(count, bool):
+        print("external_reader: INVALID — task_count missing or not an integer")
+        return EXIT_MEASUREMENT_INVALID
     print(f"external_reader: FRESH — {count} task(s), recorded {age / 3600:.1f}h ago")
     return EXIT_OK
 
