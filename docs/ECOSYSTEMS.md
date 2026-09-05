@@ -73,7 +73,7 @@ To add a new ecosystem:
 1. Create `ecosystems/<name>/` with the standard files
 2. Implement at least: `make bootstrap`, `make verify`, one ADR, one drill
 3. Add a row to the catalog above
-4. Add contribution items to CONTRIBUTING.md
+4. Add contribution items to [the backlog](backlog.md)
 5. Submit a PR
 
 The acceptance test: `cd ecosystems/<name> && make bootstrap && make verify`

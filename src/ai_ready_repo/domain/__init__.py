@@ -42,7 +42,12 @@ class Order:
     id: UUID = field(default_factory=uuid4)
     customer_id: str = ""
     items: list[str] = field(default_factory=list)
-    status: OrderStatus = field(default=OrderStatus.PENDING, init=False)
+    _status: OrderStatus = field(default=OrderStatus.PENDING, init=False, repr=False)
+
+    @property
+    def status(self) -> OrderStatus:
+        """Read the current state; use transition() to change it."""
+        return self._status
 
     def __post_init__(self) -> None:
         if not self.customer_id:
@@ -58,7 +63,7 @@ class Order:
                 f"Cannot transition from {self.status.value!r} to {new_status.value!r}. "
                 f"Allowed: {[s.value for s in allowed] or 'none'}"
             )
-        self.status = new_status
+        self._status = new_status
 
     def cancel(self) -> None:
         """Convenience method — cancels if allowed."""

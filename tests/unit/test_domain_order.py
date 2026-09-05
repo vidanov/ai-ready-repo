@@ -88,3 +88,10 @@ def test_order_has_unique_id() -> None:
     a = Order(customer_id="cust-1", items=["item-a"])
     b = Order(customer_id="cust-1", items=["item-a"])
     assert a.id != b.id
+
+
+def test_status_cannot_bypass_transition() -> None:
+    order = Order(customer_id="cust-1", items=["item-a"])
+    with pytest.raises(AttributeError):
+        order.status = OrderStatus.DELIVERED  # type: ignore[misc]
+    assert order.status == OrderStatus.PENDING

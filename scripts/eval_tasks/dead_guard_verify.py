@@ -71,12 +71,21 @@ behavioral_catches_dead_guard = variant_behavioral is False
 # A grep done-condition mis-certifies the dead-guard variant:
 grep_is_insufficient = grep_passes_on_reference is True and grep_passes_on_variant is True
 
-print(f"reference (executed-path guard) behaviorally rejects negative discount: {reference_behavioral}")
+print(
+    "reference (executed-path guard) behaviorally rejects negative discount: "
+    f"{reference_behavioral}"
+)
 print(f"dead-guard variant behaviorally rejects negative discount:            {variant_behavioral}")
-print(f"grep done-condition passes on reference: {grep_passes_on_reference}  (insufficiency demo: {grep_is_insufficient})")
+print(
+    f"grep done-condition passes on reference: {grep_passes_on_reference}  "
+    f"(insufficiency demo: {grep_is_insufficient})"
+)
 
 ok = behavioral_correct and behavioral_catches_dead_guard and grep_is_insufficient
-print(f"RESULT: {'PASS' if ok else 'FAIL'} (F-004 done-condition is behavioral; grep is demonstrably insufficient)")
+print(
+    f"RESULT: {'PASS' if ok else 'FAIL'} "
+    "(F-004 done-condition is behavioral; grep is demonstrably insufficient)"
+)
 
 if not ok:
     print(

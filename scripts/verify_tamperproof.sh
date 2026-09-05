@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tamper-proof verification: run acceptance checks from a copy of the
+# Invocation-time snapshot verification: run acceptance checks from a copy of the
 # verification files (Makefile, tests, scripts, ADRs), separate from
 # whatever copy an agent has open in an editor or is mid-edit on.
 #
@@ -13,7 +13,7 @@
 # concurrently with, or attempted after, this specific invocation. Real
 # protection against a prior-committed weakening needs the trusted copy
 # sourced from git history (e.g. a pinned ref or the last commit on
-# main) instead of the live working tree — see CONTRIBUTING.md #030.
+# main) instead of the live working tree — see docs/backlog.md #030.
 #
 # See docs/FIXTURES.md F-003 for the design rationale.
 
@@ -51,23 +51,23 @@ echo "→ Running verification from trusted copy..."
 cd "$TRUSTED_DIR"
 
 # 1. Format check (runs against working src — format is in the source, not tests)
-echo "→ [1/5] Format check..."
-uv run --project "$REPO_ROOT" ruff format --check "$REPO_ROOT/src" "$TRUSTED_DIR/tests"
+echo "→ [1/6] Format check..."
+uv run --project "$REPO_ROOT" ruff format --check "$REPO_ROOT/src" "$TRUSTED_DIR/tests" "$TRUSTED_DIR/scripts"
 
 # 2. Lint (trusted test files, working source)
-echo "→ [2/5] Lint..."
-uv run --project "$REPO_ROOT" ruff check "$REPO_ROOT/src" "$TRUSTED_DIR/tests"
+echo "→ [2/6] Lint..."
+uv run --project "$REPO_ROOT" ruff check "$REPO_ROOT/src" "$TRUSTED_DIR/tests" "$TRUSTED_DIR/scripts"
 
 # 3. Typecheck (working source)
-echo "→ [3/5] Type check..."
+echo "→ [3/6] Type check..."
 uv run --project "$REPO_ROOT" mypy "$REPO_ROOT/src"
 
 # 4. Import boundaries (uses trusted pyproject.toml)
-echo "→ [4/5] Import boundaries..."
+echo "→ [4/6] Import boundaries..."
 IMPORTLINTER_CONFIG="$TRUSTED_DIR/pyproject.toml" uv run --project "$REPO_ROOT" lint-imports
 
 # 5. Unit tests from trusted copy
-echo "→ [5/5] Unit tests (trusted)..."
+echo "→ [5/6] Unit tests (trusted)..."
 uv run --project "$REPO_ROOT" pytest "$TRUSTED_DIR/tests/unit" -v --cov="$REPO_ROOT/src" --cov-report=term-missing
 
 # 6. ADR validation from trusted copy
@@ -75,4 +75,4 @@ echo "→ [6/6] ADR validation (trusted)..."
 python3 "$TRUSTED_DIR/scripts/validate_adrs.py"
 
 echo ""
-echo "✓ Tamper-proof verification passed"
+echo "✓ Invocation-time snapshot verification passed"

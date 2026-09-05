@@ -10,9 +10,9 @@ Required fields in each ADR frontmatter:
 Exits with code 1 if any ADR fails validation.
 """
 
+import re
 import sys
 from pathlib import Path
-import re
 
 ADR_DIR = Path(__file__).parent.parent / "docs" / "adr"
 REQUIRED_FIELDS = ["id:", "status:", "scope:"]
@@ -52,8 +52,7 @@ for path in adr_files:
         status = status_match.group(1).lower()
         if status not in VALID_STATUSES:
             errors.append(
-                f"{path.name}: invalid status '{status}' "
-                f"(must be one of {sorted(VALID_STATUSES)})"
+                f"{path.name}: invalid status '{status}' (must be one of {sorted(VALID_STATUSES)})"
             )
 
     # Check that verification section exists

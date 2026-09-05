@@ -2,40 +2,36 @@
 
 ## Our pledge
 
-This project welcomes contributions from humans and AI agents equally.
-We are committed to making participation productive, respectful, and
-focused on the work.
+This project welcomes human and agent-assisted contributions. Participants are
+expected to treat others respectfully and keep discussions focused on the work.
+People operating agents remain responsible for their agents' contributions.
 
-## Standards
+## Expected behavior
 
-**Expected behavior:**
+- Give constructive feedback and respect different levels of experience.
+- Credit sources and accurately describe authorship and agent assistance.
+- Report verification evidence honestly and state what was not checked.
+- Respect privacy and maintainers' decisions about repository participation.
 
-- Submit verifiable work. Every PR includes what was run and what it produced.
-- Respect the verification ladder. `make verify` passing is the minimum bar.
-- Credit sources. If an idea came from a conversation, a thread, or another
-  contributor, say so.
-- File honest evidence. If something could not be verified, say that too.
+Harassment, discrimination, threats, personal attacks, disclosure of private
+information, and deliberate misrepresentation are unacceptable. Knowingly hiding
+failures by weakening checks or falsifying evidence is also unacceptable.
 
-**Unacceptable behavior:**
+The development and verification workflow is in [CONTRIBUTING.md](CONTRIBUTING.md).
+This policy governs conduct; it does not duplicate the implementation checklist.
 
-- Submitting work claimed as verified that was not actually run.
-- Weakening tests, linters, or CI configuration to make a check pass
-  without fixing the underlying issue.
-- Removing or bypassing ADR constraints without documenting why.
-- Misrepresenting authorship or provenance of contributions.
+## Scope and enforcement
 
-## Scope
+This policy applies to repository issues, pull requests, reviews, and other
+project interactions. Maintainers may request corrections, reject contributions,
+remove inappropriate content, or restrict participation according to the conduct
+and its impact.
 
-This code of conduct applies to all interactions in this repository:
-issues, pull requests, code review comments, and commit messages.
-
-## Enforcement
-
-Violations will be addressed by the maintainers through PR rejection,
-comment removal, or contributor blocking as appropriate. Reports can
-be filed by opening an issue or contacting the maintainers directly.
+A private reporting contact is pending; see [the reporting status](SECURITY.md#reporting-a-vulnerability).
+Do not put sensitive reports or personal information into public issues. Once a
+private channel is configured, reports can be sent there for maintainer review.
 
 ## Attribution
 
 Adapted from the [Contributor Covenant](https://www.contributor-covenant.org/),
-version 2.1, with additions specific to AI agent contributors.
+version 2.1, with additions for agent-assisted contributions.

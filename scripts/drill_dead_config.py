@@ -161,8 +161,7 @@ def main() -> int:
             file=sys.stderr,
         )
         print(
-            "Either the key governs nothing (remove it) or the reference "
-            "is missing (add it).",
+            "Either the key governs nothing (remove it) or the reference is missing (add it).",
             file=sys.stderr,
         )
         return 1
