@@ -1,8 +1,8 @@
 # ai-ready-repo
 
-> A multi-ecosystem template for AI-ready repositories. Moves rules into executable structure so there is less to explain in instruction files. Verification-first: every rule has a firing condition that proves the gate works.
+> A repository-readiness toolkit with executable reference examples. Moves rules into executable structure so there is less to explain in instruction files. Verification-first: every rule has a firing condition that proves the gate works.
 
-The template provides pinned toolchains, one-command bootstrap, import boundary enforcement, ADR validation with firing and retirement conditions, verification drills, a fixture catalog, and agent evaluation tasks. The Python ecosystem is fully implemented. CDK TypeScript and Terraform are scaffolded with the same patterns.
+The template provides pinned toolchains, one-command bootstrap, import boundary enforcement, ADR validation with firing and retirement conditions, verification drills, a fixture catalog, and verification regression tasks. The Python ecosystem is fully implemented. CDK TypeScript and Terraform are scaffolded with the same patterns.
 
 Key principle: every rule that can be enforced by a tool should be enforced by a tool. AGENTS.md documents only what the tools cannot check.
 
@@ -10,10 +10,12 @@ Key principle: every rule that can be enforced by a tool should be enforced by a
 
 - [README](https://github.com/vidanov/ai-ready-repo/blob/main/README.md): Project overview, quick start, features table, project structure
 - [AGENTS.md](https://github.com/vidanov/ai-ready-repo/blob/main/AGENTS.md): Agent guidance — commands, non-obvious constraints, completion evidence rules
-- [CONTRIBUTING.md](https://github.com/vidanov/ai-ready-repo/blob/main/CONTRIBUTING.md): 17 open contribution items, each with acceptance test and named origin
-- [ADOPT.md](https://github.com/vidanov/ai-ready-repo/blob/main/ADOPT.md): Step-by-step guide for adopting the pattern in existing repositories
+- [CONTRIBUTING.md](https://github.com/vidanov/ai-ready-repo/blob/main/CONTRIBUTING.md): Contribution workflow, review requirements, and links to the backlog
+- [Adoption guide](https://github.com/vidanov/ai-ready-repo/blob/main/docs/adoption.md): Step-by-step guide for adopting the pattern in existing repositories
 - [Ecosystems roadmap](https://github.com/vidanov/ai-ready-repo/blob/main/docs/ECOSYSTEMS.md): 12 ecosystems with pattern mapping table
 - [Fixture catalog](https://github.com/vidanov/ai-ready-repo/blob/main/docs/FIXTURES.md): 8 verification fixture types with attribution
+
+- [Backlog](https://github.com/vidanov/ai-ready-repo/blob/main/docs/backlog.md): Stable contribution item IDs and current status
 
 ## Architecture
 
@@ -27,12 +29,15 @@ Key principle: every rule that can be enforced by a tool should be enforced by a
 
 ## Scripts
 
-- [AI readiness audit](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/ai_readiness_audit.py): 20-item audit that scores any repository
+- [AI readiness audit](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/ai_readiness_audit.py): Read-only configuration inventory; presence is not execution evidence
 - [Tool bridges](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/setup_tool_bridges.sh): Generate config for Cursor, Claude Code, Copilot, Aider, Gemini, Windsurf
 - [ADR validator](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/validate_adrs.py): Checks ADR format in CI
-- [Eval runner](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/run_evals.py): Agent evaluation with baseline tracking
+- [Eval runner](https://github.com/vidanov/ai-ready-repo/blob/main/scripts/run_evals.py): Verification regression checks with baseline tracking; does not run agents
 
 ## Optional
 
 - [Article: How to Make a Repository AI-Ready](https://dev.to/aws-builders/how-to-make-a-repository-ai-ready-3j62): Full article explaining the approach, 5-level maturity model, ratchet tables
-- [Learnings](https://github.com/vidanov/ai-ready-repo/blob/main/LEARNINGS.md): Patterns discovered while building with agents
+- [Learnings](https://github.com/vidanov/ai-ready-repo/blob/main/docs/research/learnings.md): Patterns discovered while building with agents
+
+- [Toolkit architecture](https://github.com/vidanov/ai-ready-repo/blob/main/docs/architecture.md): Reusable tools, example compatibility, and trust boundaries
+- [Benchmark protocol](https://github.com/vidanov/ai-ready-repo/blob/main/benchmarks/README.md): Comparative agent runs are not yet measured

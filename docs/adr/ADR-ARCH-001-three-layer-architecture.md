@@ -3,6 +3,7 @@ id: ADR-ARCH-001
 status: accepted
 scope:
   - src/ai_ready_repo/**
+  - src/ai_ready/**
   - pyproject.toml
 ---
 
@@ -21,6 +22,9 @@ infrastructure  →  application  →  domain
 - `infrastructure` implements external adapters (databases, APIs). It MAY import `domain` and `application`.
 
 Import boundaries are enforced by `import-linter` contracts in `pyproject.toml`.
+The three layers describe the reference example, `ai_ready_repo`. Reusable
+audit, adoption, and verification code lives in the separate `ai_ready` package
+and must not import the example. A fourth contract enforces that separation.
 
 ## Reasons
 
@@ -46,7 +50,7 @@ Inspect the contracts directly:
 grep -A5 "importlinter.contracts" pyproject.toml
 ```
 
-Both contracts must report `KEPT`. A `BROKEN` result means a layer imported
+All four contracts must report `KEPT`. A `BROKEN` result means a package imported
 something it should not have.
 
 ## Firing condition
@@ -58,8 +62,10 @@ Run the drill to prove the check can convict:
 make drill-import-check
 ```
 
-This temporarily introduces a known forbidden import, asserts that `lint-imports`
-exits nonzero, then reverts the change. A passing drill means the boundary
+This introduces each prohibited layer edge in a disposable repository and
+asserts that `lint-imports` rejects it for the expected reason. The original
+workspace is never edited. `make drill-import-permit` exercises all three legal
+layer edges. A passing drill means the boundary
 enforcement is wired correctly, not merely present.
 
 Review the ADR retirement conditions if:

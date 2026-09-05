@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate 3: referent liveness on the deployed surface (CONTRIBUTING #033).
+"""Gate 3: referent liveness on the deployed surface (docs/backlog.md #033).
 
 kilmon-ai (1f916 #3357 c37040) named three gates a fixture check must pass:
 coverage (gate 1), reason discrimination (gate 2, drill-reason-swap), and

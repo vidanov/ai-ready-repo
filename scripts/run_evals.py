@@ -73,9 +73,9 @@ SKIP_PATTERNS = [
     r"pytest\.skip\(",
     r"@unittest\.skip",
     r"@unittest\.expectedFailure",
-    r"\bxit\(",          # Jasmine/Jest
-    r"\bxdescribe\(",   # Jasmine/Jest
-    r"\.skip\(",        # Mocha/Vitest
+    r"\bxit\(",  # Jasmine/Jest
+    r"\bxdescribe\(",  # Jasmine/Jest
+    r"\.skip\(",  # Mocha/Vitest
 ]
 SKIP_RE = re.compile("|".join(SKIP_PATTERNS))
 
@@ -162,7 +162,7 @@ def count_tests_disabled_in_diff() -> int:
 # never count "could not run" as a pass or a fail. A 127 and a genuine
 # failure both read as "not passing" only when the output space collapses
 # them into one bit — which is exactly how a dead check stayed invisible for
-# four days (CONTRIBUTING #031).
+# four days (docs/backlog.md #031).
 VERDICT_RAN_PASSED = "ran_passed"
 VERDICT_RAN_FAILED = "ran_failed"
 VERDICT_MEASUREMENT_INVALID = "measurement_invalid"
@@ -287,17 +287,7 @@ class EvalReceipt:
 
 
 def uses_canonical_entry_point(verification: str) -> bool:
-    """True if the verification command is the repo's documented interface.
-
-    The efficiency pillar rests on "one command, no guessing". A task whose
-    verification is `make verify` (or any `make <target>`) uses the entry point
-    the Makefile and AGENTS.md advertise, so an agent never has to discover how
-    to run it. A raw `pytest ...`, `python foo.py`, or bespoke shell pipeline is
-    something the agent had to reconstruct — the token cost the cost table names.
-
-    This is a proxy, not a token meter: it measures whether the check is reached
-    through the documented door, not how many tokens the agent spent.
-    """
+    """Record Make usage; this does not measure discovery effort or token cost."""
     return verification.strip().startswith("make ")
 
 
@@ -326,12 +316,13 @@ def validate_task(task: dict, task_path: Path) -> list[str]:
 
     origin = task.get("origin")
     if origin and origin not in VALID_ORIGINS:
-        errors.append(
-            f"origin '{origin}' not in {sorted(VALID_ORIGINS)}"
-        )
+        errors.append(f"origin '{origin}' not in {sorted(VALID_ORIGINS)}")
 
     if "oracle_question" not in task:
-        print(f"  ⚠ {task_path.name}: missing oracle_question — what does this oracle actually decide?")
+        print(
+            f"  ⚠ {task_path.name}: missing oracle_question — "
+            "what does this oracle actually decide?"
+        )
 
     return errors
 
@@ -364,9 +355,7 @@ def run_task(task_path: Path) -> dict[str, object]:
         ).to_dict()
 
     start = time.monotonic()
-    result = subprocess.run(
-        task["verification"], shell=True, capture_output=True, text=True
-    )
+    result = subprocess.run(task["verification"], shell=True, capture_output=True, text=True)
     elapsed = time.monotonic() - start
     expected_exit = task.get("expected_exit_code", 0)
     reachable, executed, verdict = classify_run(result.returncode, expected_exit)
@@ -531,8 +520,7 @@ def main() -> int:
     invalid = [
         r
         for r in results
-        if not r.get("load_error")
-        and r.get("verdict") == VERDICT_MEASUREMENT_INVALID
+        if not r.get("load_error") and r.get("verdict") == VERDICT_MEASUREMENT_INVALID
     ]
     passed, total, rate = agg.passed, agg.total, agg.rate
 
@@ -592,10 +580,7 @@ def main() -> int:
         atg = r.get("attempts_to_green")
         atg_str = f" attempts:{atg}" if atg is not None else " attempts:?"
         door = "door:make" if r.get("canonical_entry_point") else "door:adhoc"
-        print(
-            f"  {icon} {r['task']} ({r['elapsed']}s){flag_str}{origin_str}"
-            f" [{door}{atg_str}]"
-        )
+        print(f"  {icon} {r['task']} ({r['elapsed']}s){flag_str}{origin_str} [{door}{atg_str}]")
 
     # ── Efficiency pillar summary ────────────────────────────────────────
     # The safety pillar is proven by drills. The efficiency pillar is measured
@@ -604,14 +589,12 @@ def main() -> int:
     if loaded:
         canonical = sum(1 for r in loaded if r.get("canonical_entry_point"))
         measured_atg = [
-            r["attempts_to_green"]
-            for r in loaded
-            if r.get("attempts_to_green") is not None
+            r["attempts_to_green"] for r in loaded if r.get("attempts_to_green") is not None
         ]
-        print("\nEfficiency:")
+        print("\nEntry-point metadata (not an agent performance benchmark):")
         print(
             f"  entry point: {canonical}/{len(loaded)} tasks verified via "
-            f"`make` (the documented door, no discovery cost)"
+            "`make` (command convention only)"
         )
         if measured_atg:
             avg = sum(measured_atg) / len(measured_atg)
@@ -621,8 +604,8 @@ def main() -> int:
             )
         else:
             print(
-                "  attempts to green: 0 tasks reported — add "
-                "`attempts_to_green` to tasks to measure the cost claim"
+                "  attempts to green: 0 tasks reported — "
+                "recorded agent runs are required to evaluate the efficiency hypothesis"
             )
 
     baseline = load_baseline()

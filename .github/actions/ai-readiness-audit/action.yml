@@ -1,78 +1,55 @@
 name: 'AI-Readiness Audit'
-description: 'Score any repository against the ai-ready-repo 5-level maturity model (20 checks).'
+description: 'Inventory repository configuration; does not claim execution or agent performance.'
 branding:
   icon: 'check-circle'
   color: 'green'
-
 inputs:
   path:
-    description: 'Path to the repository to audit (defaults to current directory)'
-    required: false
+    description: 'Repository to inspect'
     default: '.'
   fail-below:
-    description: 'Fail the step if score is below this number (0-20). Set to 0 to never fail.'
-    required: false
+    description: 'Minimum configuration score (0-20); not a safety or performance rating'
     default: '0'
-
 outputs:
   score:
-    description: 'Number of checks passed (0-20)'
+    description: 'Configured checks (0-20)'
     value: ${{ steps.audit.outputs.score }}
   level:
-    description: 'Current maturity level (0-4)'
+    description: 'Configuration level (0-4), not demonstrated maturity'
     value: ${{ steps.audit.outputs.level }}
   report:
-    description: 'Full audit report text'
+    description: 'JSON report with evidence and limitations'
     value: ${{ steps.audit.outputs.report }}
-
 runs:
   using: 'composite'
   steps:
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
-
-    - name: Download audit script
-      shell: bash
-      run: |
-        curl -fsSL \
-          "https://raw.githubusercontent.com/vidanov/ai-ready-repo/main/scripts/ai_readiness_audit.py" \
-          -o /tmp/ai_readiness_audit.py
-
-    - name: Run audit
+        python-version: '3.14'
+    - name: Inspect configuration using the selected action revision
       id: audit
       shell: bash
+      env:
+        PYTHONPATH: ${{ github.action_path }}/../../../src
+        AUDIT_PATH: ${{ inputs.path }}
+        AUDIT_THRESHOLD: ${{ inputs.fail-below }}
       run: |
-        REPORT=$(python3 /tmp/ai_readiness_audit.py "${{ inputs.path }}" 2>&1 || true)
-        echo "$REPORT"
+        python3 - <<'PYTHON'
+        import json
+        import os
+        from pathlib import Path
+        from ai_ready.audit import audit
 
-        # Extract score and level
-        SCORE=$(echo "$REPORT" | grep -oP 'Score: \K[0-9]+' || echo "0")
-        LEVEL=$(echo "$REPORT" | grep -oP 'Current level: \K[0-9]+' || echo "0")
-
-        echo "score=$SCORE" >> "$GITHUB_OUTPUT"
-        echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
-
-        # Multi-line output for report
-        {
-          echo "report<<EOF_REPORT"
-          echo "$REPORT"
-          echo "EOF_REPORT"
-        } >> "$GITHUB_OUTPUT"
-
-        # Write to job summary
-        echo "## AI-Readiness Audit" >> "$GITHUB_STEP_SUMMARY"
-        echo "" >> "$GITHUB_STEP_SUMMARY"
-        echo "**Score:** $SCORE/20 | **Level:** $LEVEL/4" >> "$GITHUB_STEP_SUMMARY"
-        echo "" >> "$GITHUB_STEP_SUMMARY"
-        echo '```' >> "$GITHUB_STEP_SUMMARY"
-        echo "$REPORT" >> "$GITHUB_STEP_SUMMARY"
-        echo '```' >> "$GITHUB_STEP_SUMMARY"
-
-        # Fail if below threshold
-        THRESHOLD="${{ inputs.fail-below }}"
-        if [ "$SCORE" -lt "$THRESHOLD" ]; then
-          echo "::error::AI-readiness score ($SCORE) is below threshold ($THRESHOLD)"
-          exit 1
-        fi
+        threshold = int(os.environ['AUDIT_THRESHOLD'])
+        if not 0 <= threshold <= 20:
+            raise SystemExit('fail-below must be between 0 and 20')
+        report = audit(Path(os.environ['AUDIT_PATH']))
+        print(report.render())
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+            output.write(f'score={report.score}\nlevel={report.level}\n')
+            output.write('report=' + json.dumps(report.to_dict()) + '\n')
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+            summary.write('## Configuration inventory\n\n```text\n' + report.render() + '```\n')
+        if report.score < threshold:
+            raise SystemExit(f'Configuration score {report.score} is below {threshold}')
+        PYTHON

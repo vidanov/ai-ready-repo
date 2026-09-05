@@ -1,6 +1,7 @@
 # Fixtures — implemented and runnable
 
-Every fixture here has a `make` target. Run it, see the result. If it
+Mutation drills run in disposable repository copies.
+Every fixture here has a documented entry point. Run it, see the result. If it
 passes, the gate works. If it fails, something is miswired.
 
 For the full catalog of known failure classes (including ideas and
@@ -22,9 +23,8 @@ the file.
 
 `make drill-import-check`
 
-Plants a forbidden import in the domain layer, asserts `lint-imports`
-exits nonzero and names the specific violation, then reverts. Uses
-`trap` for unconditional cleanup.
+Plants each forbidden example-layer import, asserts `lint-imports`
+exits nonzero and names the specific violation, inside a disposable repository copy. Existing edits are preserved.
 
 ### F-002b: Permission drill (import boundary)
 
@@ -36,17 +36,18 @@ that misses violations.
 
 ### F-003: Oracle tampering
 
-`make verify-tamperproof`
+`make verify-snapshot` (`verify-tamperproof` remains a compatibility alias).
 
-Copies verification files to a temp directory before the agent runs.
-After changes, runs the check from the trusted copy. The agent can
-rewrite its own tests; the copy still catches violations.
+The snapshot is taken when the command starts, so earlier test weakening is
+included. This demonstrates snapshot mechanics, not tamper-proof isolation.
+`make verify-from-git TRUSTED_REF=<reviewed-commit>` reads acceptance tests and
+pytest configuration from that commit while exercising working implementations.
+Its default `HEAD` only protects against uncommitted test edits. Both require a
+trusted caller; an agent that can rewrite the verifier can defeat it.
 
-⚠ **Metagaming gap:** `verify-tamperproof` prevents modification but
-not metagaming. If the agent reads the grader source and optimizes
-for specific checks rather than the underlying intent, the oracle is
-compromised at a level this fixture does not yet reach. See the
-[failure catalog](FAILURE-CATALOG.md#f-003-metagaming) for details.
+`make drill-verifier-isolation` proves the distinction in a disposable repository:
+a planted failing test affects working-tree pytest and is ignored by the committed
+test run. This drill never modifies the user's tests.
 
 ### F-004: Dead-guard detection
 

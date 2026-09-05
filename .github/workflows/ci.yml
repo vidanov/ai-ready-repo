@@ -28,31 +28,10 @@ jobs:
         run: pip install uv==0.5.24
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" --system
+        run: uv sync --frozen --all-extras
 
       - name: Verify (format + lint + typecheck + import-check + tests + ADRs)
         run: make verify
-
-      - name: Format check
-        run: make format-check
-
-      - name: Lint
-        run: make lint
-
-      - name: Type check
-        run: make typecheck
-
-      - name: Import boundaries
-        run: make import-check
-
-      - name: Unit tests
-        run: make test-unit
-
-      - name: Validate ADRs
-        run: make validate-adrs
-
-      - name: Badge sync check
-        run: make sync-badges-check
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -64,7 +43,7 @@ jobs:
   drills:
     name: Drills
     runs-on: ubuntu-latest
-    # Non-gating (CONTRIBUTING #022): a drill failure must be visible on
+    # Non-gating (docs/backlog.md #022): a drill failure must be visible on
     # every PR, not silently unrun. continue-on-error is per-step, not
     # per-job, so one broken drill doesn't hide the others' results — each
     # shows its own pass/fail in the checks list instead of one aggregate.
@@ -80,7 +59,7 @@ jobs:
         run: pip install uv==0.5.24
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" --system
+        run: uv sync --frozen --all-extras
 
       - name: drill-import-check
         continue-on-error: true

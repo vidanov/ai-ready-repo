@@ -1,4 +1,4 @@
-name: Daily agent evaluation
+name: Daily verification regression
 
 on:
   schedule:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   eval:
-    name: Agent eval
+    name: Verification regression
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -25,14 +25,15 @@ jobs:
         run: pip install uv==0.5.24
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" --system
+        run: uv sync --frozen --all-extras
 
       - name: Run evaluations
-        run: python scripts/run_evals.py
+        shell: bash
+        run: uv run python scripts/run_evals.py 2>&1 | tee verification-regression.txt
 
       - name: Upload eval results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: eval-results-${{ github.run_id }}
-          path: scripts/eval_baseline.json
+          path: verification-regression.txt

@@ -26,6 +26,8 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).parent.parent
 MAKEFILE = REPO_ROOT / "Makefile"
 CI_DIR = REPO_ROOT / ".github" / "workflows"
@@ -61,6 +63,7 @@ DRILL_TARGETS = {
     "drill-referent-liveness",
     "verify-tamperproof",
     "verify-from-git",
+    "verify-snapshot",
 }
 
 # Targets that are intentionally local-only (not a gap if missing from CI)
@@ -73,6 +76,7 @@ LOCAL_ONLY = {
     "test",
     "test-integration",
     "test-coverage",
+    "test-toolkit",
     "verify-fast",
     "security",
     "audit",
@@ -91,8 +95,8 @@ def get_makefile_targets() -> set[str]:
     """Extract all phony targets from the Makefile."""
     targets = set()
     text = MAKEFILE.read_text()
-    for match in re.finditer(r"^\.PHONY:\s+(\S+)", text, re.MULTILINE):
-        targets.add(match.group(1))
+    for match in re.finditer(r"^\.PHONY:[ \t]+([^\n]+)", text, re.MULTILINE):
+        targets.update(match.group(1).split())
     return targets
 
 
@@ -102,11 +106,32 @@ def get_ci_referenced_targets() -> set[str]:
     if not CI_DIR.exists():
         return referenced
 
-    for f in CI_DIR.glob("*.yml"):
-        text = f.read_text()
-        # Match "make <target>" in run: steps
-        for match in re.finditer(r"make\s+(\S+)", text):
-            referenced.add(match.group(1))
+    for f in [*CI_DIR.glob("*.yml"), *CI_DIR.glob("*.yaml")]:
+        workflow = yaml.safe_load(f.read_text())
+        for job in workflow.get("jobs", {}).values():
+            for step in job.get("steps", []):
+                run = step.get("run", "")
+                for match in re.finditer(r"^\s*make[ \t]+([\w-]+)", run, re.MULTILINE):
+                    referenced.add(match.group(1))
+
+    return expand_prerequisites(referenced, MAKEFILE.read_text())
+
+
+def expand_prerequisites(referenced: set[str], makefile: str) -> set[str]:
+    """Resolve the literal prerequisite graph used by this repo's Makefile.
+
+    This intentionally does not interpret arbitrary Make syntax or execute make.
+    A target invoked by CI covers its prerequisites without repeating each check.
+    """
+    dependencies = {}
+    for match in re.finditer(r"^([\w-]+):([^\n#]*)", makefile, re.MULTILINE):
+        dependencies[match.group(1)] = set(match.group(2).split())
+    referenced = set(referenced)
+    pending = list(referenced)
+    while pending:
+        for child in dependencies.get(pending.pop(), set()) - referenced:
+            referenced.add(child)
+            pending.append(child)
 
     return referenced
 
@@ -121,7 +146,8 @@ def main() -> int:
     # Check verification targets
     for t in sorted(VERIFICATION_TARGETS):
         if t not in all_targets:
-            continue  # target doesn't exist in Makefile, skip
+            errors.append(f"{t} (required target missing from Makefile)")
+            continue
         if t not in ci_targets:
             errors.append(t)
 
@@ -137,7 +163,9 @@ def main() -> int:
     unclassified = all_targets - classified
     if unclassified:
         for t in sorted(unclassified):
-            warnings.append(f"{t} (unclassified — add to VERIFICATION_TARGETS, DRILL_TARGETS, or LOCAL_ONLY)")
+            warnings.append(
+                f"{t} (unclassified — add to VERIFICATION_TARGETS, DRILL_TARGETS, or LOCAL_ONLY)"
+            )
 
     # Report
     print(f"→ {len(all_targets)} Makefile targets, {len(ci_targets)} referenced in CI")

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Negative drill for gate 3, referent liveness (CONTRIBUTING #033, kilmon-ai
+# Negative drill for gate 3, referent liveness (docs/backlog.md #033, kilmon-ai
 # 1f916 #3357 c37040). The claim: the manifest walk detects a referent that
 # has drifted out from under a fixture -- the #031 class, where a task stayed
 # green over `python` (exit 127) because textual agreement held while the
@@ -14,6 +14,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$REPO_ROOT/scripts/drill_workspace.sh"
 cd "$REPO_ROOT"
 
 TASK="scripts/eval_tasks/order-state-transitions.yaml"

@@ -1,4 +1,5 @@
 """Drill: prove Order.transition() guard fires on an invalid transition."""
+
 from ai_ready_repo.domain import Order, OrderStatus
 
 o = Order(customer_id="drill", items=["x"])

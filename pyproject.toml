@@ -5,9 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "ai-ready-repo"
 version = "0.1.0"
-description = "AI-ready repository starter template"
+description = "Repository readiness toolkit and executable reference example"
 requires-python = ">=3.14"
 dependencies = []
+
+[project.scripts]
+ai-ready = "ai_ready.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_ready", "src/ai_ready_repo"]
 
 [project.optional-dependencies]
 dev = [
@@ -40,6 +46,12 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "T20"]
+"src/ai_ready/cli.py" = ["T201"]
+"src/ai_ready/verification/sandbox.py" = ["T201", "S603", "S607"]
+"src/ai_ready/verification/runner.py" = ["S603", "S607"]
+"src/ai_ready/verification/process.py" = ["S603"]
+"scripts/**" = ["T201", "S603", "S607"]
+"scripts/run_evals.py" = ["S602"]
 
 [tool.mypy]
 python_version = "3.14"
@@ -62,7 +74,7 @@ fail_under = 80
 show_missing = true
 
 [tool.importlinter]
-root_packages = ["ai_ready_repo"]
+root_packages = ["ai_ready_repo", "ai_ready"]
 include_external_packages = true
 
 # adr: ADR-ARCH-001
@@ -74,7 +86,21 @@ forbidden_modules = ["ai_ready_repo.infrastructure"]
 
 # adr: ADR-ARCH-001
 [[tool.importlinter.contracts]]
+name = "Toolkit must not depend on the example"
+type = "forbidden"
+source_modules = ["ai_ready"]
+forbidden_modules = ["ai_ready_repo"]
+
+# adr: ADR-ARCH-001
+[[tool.importlinter.contracts]]
 name = "Domain must not import application"
 type = "forbidden"
 source_modules = ["ai_ready_repo.domain"]
 forbidden_modules = ["ai_ready_repo.application"]
+
+# adr: ADR-ARCH-001
+[[tool.importlinter.contracts]]
+name = "Application must not import infrastructure"
+type = "forbidden"
+source_modules = ["ai_ready_repo.application"]
+forbidden_modules = ["ai_ready_repo.infrastructure"]
