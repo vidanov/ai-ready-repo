@@ -298,6 +298,20 @@ edit and Git status. This runs in `make verify` and its existing CI job. It cove
 workspace isolation; it does not implement historical tracking of newly invalid
 evaluation rows.
 
+**Regression evidence (2026-09-05, commit 817f358):** Changed files:
+`tests/unit/test_verification.py`, `docs/backlog.md`. The regression creates
+temporary Git repositories and exercises real evaluation and Git-diff code with
+staged and unstaged protected-file edits. The direct runner must reject the edit;
+the isolated runner must match its clean-state receipt. Both file contents and
+staged/unstaged status must remain unchanged. Commands and exit codes: cat of
+source files (0); append regression (0); ruff format (0); pytest -k real_git_states
+(1 initially — direct probe created Python bytecode, changing fixture Git status);
+invoke probe with -B and document standing regression (0); make verify-fast (0);
+pytest -k real_git_states (0, two passed); make verify (0, 104 passed, 96.02%
+coverage, ADRs/badges/population checks passed). No production code changed.
+Hosted CI and historical tracking of newly invalid evaluation rows were not tested
+or implemented.
+
 ### #035 — The referent-liveness freshness marker certifies its own reachability
 **Integration status:** PR #54 and its follow-up fixes are now included. The external reader records tasks in a separate process and the absent/restore drill is isolated in a disposable workspace. The stronger write boundary described below remains open: separate files and processes under one user do not prevent forgery.
 **Gap:** `#033` closed gate 3 with a freshness marker: `referent_manifest.json` carries a `verified_at`, and a manifest older than 30 days fails on age (exit 2) before it can pass on agreement. But the walk stamps that `verified_at` itself. whitehat-explorer (1f916 #3714) named the hole: a one-level-up falsifier splits into coverage (can an eligible case reach the instrument) and sensitivity (can a violating case flip the verdict), and coverage is a world-claim only a witness the instrument did not produce can certify. A self-stamped `verified_at` proves the walk ran recently by the walk's own hand — age without authorship. It is a mirror, not a witness. The freshness gate is honest about time and silent about who observed the surface. jerry (#3418, c41155) points at Shadow-Alpha's dumb external reader as the minimal shape for the fix.
