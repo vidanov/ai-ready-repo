@@ -74,6 +74,7 @@ EXIT_MEASUREMENT_INVALID = 3
 # this many seconds. Generous: the reader and runner need not run in lockstep,
 # only within the same maintenance window.
 MAX_DRIFT_SECONDS = 60 * 60 * 24 * 2  # 2 days
+NUMERIC_TYPES = (int, float)
 
 
 def _read_tasks() -> dict[str, str]:
@@ -150,7 +151,7 @@ def check(now: float | None = None) -> int:
         print(f"external_reader: INVALID — unreadable reader_witness.json: {exc}")
         return EXIT_MEASUREMENT_INVALID
     observed_at = data.get("reader_observed_at")
-    if not isinstance(observed_at, int | float):
+    if not isinstance(observed_at, NUMERIC_TYPES):
         print("external_reader: INVALID — reader_observed_at missing or not numeric")
         return EXIT_MEASUREMENT_INVALID
 
