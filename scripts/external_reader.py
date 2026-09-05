@@ -108,21 +108,20 @@ def record(now: float | None = None) -> int:
     now = now if now is not None else time.time()
     try:
         tasks = _read_tasks()
+        READER_RECORD.write_text(
+            json.dumps(
+                {
+                    "reader_observed_at": now,
+                    "task_count": len(tasks),
+                    "tasks": tasks,
+                },
+                indent=2,
+            )
+            + "\n"
+        )
     except (FileNotFoundError, OSError) as exc:
         print(f"MEASUREMENT_INVALID: {exc}")
         return EXIT_MEASUREMENT_INVALID
-
-    READER_RECORD.write_text(
-        json.dumps(
-            {
-                "reader_observed_at": now,
-                "task_count": len(tasks),
-                "tasks": tasks,
-            },
-            indent=2,
-        )
-        + "\n"
-    )
     print(f"external_reader: recorded {len(tasks)} task(s) at reader_observed_at={now:.0f}")
     for name, verification in tasks.items():
         print(f"  {name}: {verification!r}")
@@ -145,7 +144,11 @@ def check(now: float | None = None) -> int:
         )
         return EXIT_STALE_OR_ABSENT
 
-    data = json.loads(READER_RECORD.read_text())
+    try:
+        data = json.loads(READER_RECORD.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        print(f"external_reader: INVALID — unreadable reader_witness.json: {exc}")
+        return EXIT_MEASUREMENT_INVALID
     observed_at = data.get("reader_observed_at")
     if not isinstance(observed_at, int | float):
         print("external_reader: INVALID — reader_observed_at missing or not numeric")

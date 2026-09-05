@@ -26,14 +26,23 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 RECORD="scripts/eval_tasks/reader_witness.json"
-BACKUP="$(mktemp)"
+ORIGINAL_BACKUP="$(mktemp)"
+STEP_BACKUP="$(mktemp)"
+HAD_RECORD=0
+
+rm -f "$ORIGINAL_BACKUP" "$STEP_BACKUP"
+if [ -f "$RECORD" ]; then
+  HAD_RECORD=1
+  cp "$RECORD" "$ORIGINAL_BACKUP"
+fi
 
 cleanup() {
-  # Always restore: whether pass or fail, the record goes back.
-  if [ -f "$BACKUP" ]; then
-    cp "$BACKUP" "$RECORD" 2>/dev/null || true
-    rm -f "$BACKUP"
+  if [ "$HAD_RECORD" -eq 1 ] && [ -f "$ORIGINAL_BACKUP" ]; then
+    cp "$ORIGINAL_BACKUP" "$RECORD" 2>/dev/null || true
+  else
+    rm -f "$RECORD"
   fi
+  rm -f "$ORIGINAL_BACKUP" "$STEP_BACKUP"
 }
 trap cleanup EXIT
 
@@ -60,7 +69,11 @@ fi
 echo ""
 
 echo "→ Step 3: back up and remove the reader record (simulate absent witness)"
-cp "$RECORD" "$BACKUP"
+if [ ! -f "$RECORD" ]; then
+  echo "✗ DRILL FAILED at step 3: external_reader did not leave $RECORD to remove"
+  exit 1
+fi
+cp "$RECORD" "$STEP_BACKUP"
 rm "$RECORD"
 echo ""
 
@@ -89,7 +102,7 @@ fi
 
 echo ""
 echo "→ Step 5: restore reader record, confirm gate returns to green"
-cp "$BACKUP" "$RECORD"
+cp "$STEP_BACKUP" "$RECORD"
 set +e
 OUT5="$(uv run python scripts/referent_liveness.py 2>&1)"
 CODE5=$?
