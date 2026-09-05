@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import os
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -68,13 +69,34 @@ def audit(root: Path) -> Report:
     )
     precommit = read(".pre-commit-config.yaml")
     agent = read("AGENTS.md") or read("CLAUDE.md")
-    tests = [
-        path
-        for directory in ("tests", "test", "spec")
-        for path in (root / directory).rglob("*")
-        if path.is_file()
-        and re.search(r"(^test_.+\.py$|_test\.py$|\.(test|spec)\.[cm]?[jt]sx?$)", path.name)
-    ]
+    tests: list[Path] = []
+    excluded = {
+        ".git",
+        ".venv",
+        "venv",
+        "node_modules",
+        "dist",
+        "build",
+        "coverage",
+        "htmlcov",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".next",
+        ".nuxt",
+        "vendor",
+    }
+    for directory, subdirectories, filenames in os.walk(root, followlinks=False):
+        subdirectories[:] = sorted(name for name in subdirectories if name not in excluded)
+        for filename in sorted(filenames):
+            path = Path(directory) / filename
+            if (
+                not path.is_symlink()
+                and path.is_file()
+                and re.search(r"(^test_.+\.py$|_test\.py$|\.(test|spec)\.[cm]?[jt]sx?$)", filename)
+            ):
+                tests.append(path)
     checks: list[Finding] = []
 
     def add(level: int, name: str, configured: bool, detail: str) -> None:

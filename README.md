@@ -43,6 +43,13 @@ install tools, execute the target project, or invent a Jest/ESLint setup. Missin
 commands are listed in `ADOPTION.md`; generated verification fails while setup is
 incomplete. See [the adoption guide](docs/adoption.md).
 
+## Improve with an agent
+
+The reusable [improve-repository skill](skills/improve-repository/SKILL.md) guides
+an agent through evidence-based review and authorized improvements using the
+project's existing tools. It covers integration work that additive adoption cannot
+finish automatically. See [installation and usage](docs/adoption.md#agent-assisted-improvement).
+
 ## What each result means
 
 | Evidence | Meaning |
@@ -66,6 +73,7 @@ tests/unit/                  Toolkit, example, and verification regression tests
 scripts/                     Compatibility entry points, maintenance checks, research drills
 scripts/eval_tasks/           Verification regression tasks and failure fixtures
 ecosystems/                  CDK and Terraform reference scaffolds
+skills/improve-repository/   Reusable agent workflow for repository improvements
 benchmarks/                  Protocol for future comparative agent measurements
 docs/adr/                    Decisions explaining executable constraints
 docs/articles/               Articles and historical research

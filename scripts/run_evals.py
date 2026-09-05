@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Agent evaluation runner.
+Verification regression runner.
 
-Runs representative coding tasks against this repository and reports
-task success rate, runtime, and any regressions from the baseline.
+Runs verification commands against this repository and reports task success,
+runtime, and measurement coverage. It does not execute agent coding tasks.
 
-Measures seven dimensions per task:
+Records these dimensions per task:
   - verify_pass: did the verification command exit as expected?
   - reason_match: did the output contain the expected_reason string?
   - done_condition: did the task's specific done-condition pass?
@@ -37,8 +37,9 @@ Tasks are defined in scripts/eval_tasks/. Each task is a YAML file with:
         ran the task; the runner cannot observe it after the fact. Omitted =
         not measured (reported as "?"), never assumed to be 1.
 
-Failed-to-load tasks (bad YAML, missing fields) count as failures in
-the denominator, not skips. The rate is over all discovered files.
+Failed-to-load tasks lower measurement coverage and are excluded from the
+pass/fail rate. Every measurable task must pass, regardless of the baseline.
+Baseline updates require the same passing checks and coverage floor.
 
 Usage:
     python scripts/run_evals.py                  # run all tasks
@@ -46,8 +47,8 @@ Usage:
     python scripts/run_evals.py --baseline       # update baseline
 
 Exit code:
-  0 — all tasks passed and success rate >= baseline
-  1 — tasks failed or success rate regressed
+  0 — all measurable tasks passed and measurement coverage met its floor
+  1 — tasks failed, no tasks matched, or measurement coverage was below its floor
 """
 
 import argparse
@@ -494,7 +495,7 @@ def aggregate(results: list[dict], floor: float = MEASUREMENT_COVERAGE_FLOOR) ->
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run agent evaluation tasks")
+    parser = argparse.ArgumentParser(description="Run verification regression tasks")
     parser.add_argument("--task", help="Run a single task by name")
     parser.add_argument("--baseline", action="store_true", help="Update baseline")
     args = parser.parse_args()
@@ -502,7 +503,7 @@ def main() -> int:
     if not TASKS_DIR.exists():
         print(f"No eval tasks found at {TASKS_DIR}/")
         print("Add YAML task files to get started.")
-        return 0
+        return 1
 
     task_files = sorted(TASKS_DIR.glob("*.yaml"))
     if args.task:
@@ -583,8 +584,7 @@ def main() -> int:
         print(f"  {icon} {r['task']} ({r['elapsed']}s){flag_str}{origin_str} [{door}{atg_str}]")
 
     # ── Efficiency pillar summary ────────────────────────────────────────
-    # The safety pillar is proven by drills. The efficiency pillar is measured
-    # here: how reachable the check is, and how many tries the agent needed.
+    # Task metadata is descriptive; it does not establish agent efficiency.
     loaded = [r for r in results if not r.get("load_error")]
     if loaded:
         canonical = sum(1 for r in loaded if r.get("canonical_entry_point"))
@@ -611,10 +611,6 @@ def main() -> int:
     baseline = load_baseline()
     prior_rate = baseline.get("success_rate", 0.0)
 
-    if args.baseline:
-        save_baseline({"success_rate": rate, "tasks": total})
-        return 0
-
     if not agg.coverage_ok:
         print(
             f"\n✗ Measurement coverage {agg.coverage:.0%} below floor "
@@ -625,9 +621,13 @@ def main() -> int:
         )
         return 1
 
-    if rate < prior_rate - 0.05:  # 5% regression threshold
-        print(f"\n✗ Regression: {rate:.0%} < baseline {prior_rate:.0%}")
+    if passed != total:
+        print(f"\n✗ {total - passed} verification task(s) failed; baseline cannot waive failures.")
         return 1
+
+    if args.baseline:
+        save_baseline({"success_rate": rate, "tasks": total})
+        return 0
 
     print(f"\n✓ Success rate {rate:.0%} (baseline {prior_rate:.0%})")
     return 0
