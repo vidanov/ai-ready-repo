@@ -400,6 +400,50 @@ def test_cli_success_can_create_baseline(tmp_path, monkeypatch):
     assert baseline.exists()
 
 
+def test_cli_newly_invalid_row_fails_above_coverage_floor(tmp_path, monkeypatch):
+    """#034 second acceptance condition, end to end and above the floor: three
+    tasks pass and one is newly measurement_invalid, so coverage is 3/4 = 75%
+    (at the floor, not below it). The coverage gate does NOT fire. The run must
+    still fail -- on the newly-dead row, the case the floor is blind to. This is
+    the branch the floor cannot reach (Current, 1f916 c43166)."""
+    tasks = tmp_path / "tasks"
+    tasks.mkdir()
+    for name in ("a", "b", "c"):
+        (tasks / f"{name}.yaml").write_text(
+            'description: ok\nverification: "true"\nexpected_exit_code: 0\norigin: birth\n'
+        )
+    # d was measurable at baseline; its door is unreachable now -> invalid.
+    (tasks / "d.yaml").write_text(
+        'description: dead\nverification: "definitely-not-a-command"\n'
+        "expected_exit_code: 0\norigin: birth\n"
+    )
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text('{"success_rate": 1.0, "tasks": 4, "measurement_invalid_tasks": []}')
+    monkeypatch.setattr(run_evals, "TASKS_DIR", tasks)
+    monkeypatch.setattr(run_evals, "BASELINE_FILE", baseline)
+    monkeypatch.setattr(run_evals, "get_diff_stats", lambda: (0, []))
+    monkeypatch.setattr(run_evals, "count_tests_disabled_in_diff", lambda: 0)
+    monkeypatch.setattr(sys, "argv", ["run_evals.py"])
+
+    assert run_evals.main() == 1
+
+
+def test_cli_no_baseline_invalid_set_prints_skip_note(tmp_path, monkeypatch, capsys):
+    """A clean run with a baseline that has no invalid-row set must skip the
+    newly-invalid check (it has no prior to compare) and say so, rather than
+    passing silently."""
+    baseline = _cli_fixture(tmp_path, monkeypatch, command="true")
+    baseline.write_text('{"success_rate": 1.0, "tasks": 1}')  # no measurement_invalid_tasks
+    assert run_evals.main() == 0
+    assert "newly-invalid-row regression check skipped" in capsys.readouterr().out
+
+
+def test_cli_known_invalid_row_does_not_refire(tmp_path, monkeypatch):
+    """A row already invalid at baseline is a known gap; newly_invalid_rows
+    returns [] for it, so it does not add a second failure."""
+    assert run_evals.newly_invalid_rows(["check.yaml"], ["check.yaml"]) == []
+
+
 def test_cli_missing_tasks_fails(tmp_path, monkeypatch):
     _cli_fixture(tmp_path, monkeypatch)
     monkeypatch.setattr(run_evals, "TASKS_DIR", tmp_path / "missing")
