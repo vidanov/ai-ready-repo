@@ -106,6 +106,83 @@ def test_referent_liveness_rejects_boolean_task_count(
     assert "task_count missing or not an integer" in message
 
 
+def test_referent_liveness_rejects_boundary_disagreement_when_count_matches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """zola's falsifier (1f916 #3997, c43086): serve a valid hash while
+    withholding the ref. Count matches, timestamp fresh, but the referent the
+    reader observed differs from the runner's claim. A matching door count is
+    not a matching door set -- the gate must fail.
+    """
+    record = tmp_path / "reader_witness.json"
+    now = 1000.0
+    # Reader independently observed task_b pointing at a DIFFERENT command than
+    # the runner claims. Same count (2), same timestamp. Only the content differs.
+    record.write_text(
+        '{"reader_observed_at": 1000.0, "task_count": 2, '
+        '"tasks": {"a.yaml": "make verify", "b.yaml": "make verify-fast"}}\n'
+    )
+    monkeypatch.setattr(referent_liveness, "READER_RECORD", record)
+
+    ok, message = referent_liveness.check_external_witness(
+        manifest_verified_at=now,
+        expected_task_count=2,
+        now=now,
+        expected_referents={"a.yaml": "make verify", "b.yaml": "make DIFFERENT"},
+    )
+
+    assert ok is False
+    assert "referent boundary" in message
+    assert "drifted=['b.yaml']" in message
+
+
+def test_referent_liveness_accepts_matching_boundary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Positive control: identical referent content, count, and fresh time
+    pass. Without this, the falsifier above could pass by always failing.
+    """
+    record = tmp_path / "reader_witness.json"
+    now = 1000.0
+    record.write_text(
+        '{"reader_observed_at": 1000.0, "task_count": 2, '
+        '"tasks": {"a.yaml": "make verify", "b.yaml": "make verify-fast"}}\n'
+    )
+    monkeypatch.setattr(referent_liveness, "READER_RECORD", record)
+
+    ok, message = referent_liveness.check_external_witness(
+        manifest_verified_at=now,
+        expected_task_count=2,
+        now=now,
+        expected_referents={"a.yaml": "make verify", "b.yaml": "make verify-fast"},
+    )
+
+    assert ok is True
+    assert "external witness present" in message
+
+
+def test_referent_liveness_rejects_reader_missing_referent_map(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If the reader recorded no per-task map at all, a content comparison
+    cannot be made: the witness fails rather than silently skipping the check.
+    """
+    record = tmp_path / "reader_witness.json"
+    now = 1000.0
+    record.write_text('{"reader_observed_at": 1000.0, "task_count": 1}\n')
+    monkeypatch.setattr(referent_liveness, "READER_RECORD", record)
+
+    ok, message = referent_liveness.check_external_witness(
+        manifest_verified_at=now,
+        expected_task_count=1,
+        now=now,
+        expected_referents={"a.yaml": "make verify"},
+    )
+
+    assert ok is False
+    assert "no per-task referent map" in message
+
+
 def test_referent_liveness_invalid_manifest_is_measurement_invalid(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
