@@ -202,6 +202,45 @@ def test_coverage_floor_fails_a_rotting_harness() -> None:
     assert agg.coverage_ok is False  # below floor — not healthy
 
 
+def test_newly_invalid_row_is_a_regression() -> None:
+    """#034 second acceptance condition (Current, 1f916 c43166): a task that was
+    measurable at baseline and is measurement_invalid now is a newly-dead row.
+    It must be flagged even when the surviving tasks still pass."""
+    baseline_invalid: list[str] = []  # everything was measurable at baseline
+    current = ["repository-verification.yaml"]  # this one died since
+    assert run_evals.newly_invalid_rows(current, baseline_invalid) == [
+        "repository-verification.yaml"
+    ]
+
+
+def test_row_invalid_at_baseline_is_not_a_new_regression() -> None:
+    """A row that was already invalid at baseline is a known gap, not a new
+    corpse. It must not re-fire on every run (that would be a stuck alarm)."""
+    baseline_invalid = ["known-gap.yaml"]
+    current = ["known-gap.yaml"]
+    assert run_evals.newly_invalid_rows(current, baseline_invalid) == []
+
+
+def test_new_task_invalid_on_arrival_is_flagged() -> None:
+    """A brand-new task that is invalid on arrival is flagged as a new corpse.
+    This is deliberate: it forces an explicit baseline update rather than
+    letting a new dead row slip in unnoticed. Only a row already invalid at
+    baseline (a known gap) is exempt."""
+    baseline_invalid = ["known-gap.yaml"]
+    current = ["known-gap.yaml", "brand-new.yaml"]
+    assert run_evals.newly_invalid_rows(current, baseline_invalid) == ["brand-new.yaml"]
+
+
+def test_invalid_task_names_extracts_only_measurement_invalid() -> None:
+    results = [
+        {"task": "a.yaml", "verdict": run_evals.VERDICT_RAN_PASSED},
+        {"task": "b.yaml", "verdict": run_evals.VERDICT_MEASUREMENT_INVALID},
+        {"task": "c.yaml", "verdict": run_evals.VERDICT_RAN_FAILED},
+        {"task": "d.yaml", "verdict": run_evals.VERDICT_MEASUREMENT_INVALID},
+    ]
+    assert run_evals.invalid_task_names(results) == ["b.yaml", "d.yaml"]
+
+
 def test_full_coverage_passes_floor() -> None:
     results = [
         _receipt(run_evals.VERDICT_RAN_PASSED, passed=True),
