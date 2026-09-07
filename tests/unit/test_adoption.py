@@ -105,6 +105,27 @@ def test_python_without_tools_records_gaps(tmp_path: Path) -> None:
     assert "adoption-incomplete" in plan.files["Makefile"]
 
 
+def test_flat_layout_python_lint_covers_application_package(tmp_path: Path) -> None:
+    """Coverage-gap regression: a flat layout (mypackage/ + tests/, no src/) must
+    generate lint/format that scope the application package, not only tests.
+    Without this, `ruff check tests` lints tests and lets application lint
+    violations escape -- a population gap in generated verification."""
+    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\n[tool.pytest.ini_options]\n")
+    (tmp_path / "uv.lock").write_text("")
+    (tmp_path / "mypackage").mkdir()
+    (tmp_path / "mypackage" / "__init__.py").write_text("")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "__init__.py").write_text("")
+
+    makefile = plan_adoption(tmp_path).files["Makefile"]
+    # The application package must appear in the lint/format scope.
+    assert "mypackage" in makefile
+    # And it must not be tests-only.
+    lint_lines = [ln for ln in makefile.splitlines() if "ruff check" in ln]
+    assert lint_lines, "expected a ruff check line"
+    assert any("mypackage" in ln for ln in lint_lines)
+
+
 def test_poetry_environment_is_preserved(tmp_path: Path) -> None:
     (tmp_path / "pyproject.toml").write_text("[tool.ruff]\n[tool.mypy]\n")
     (tmp_path / "poetry.lock").write_text("")

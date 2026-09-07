@@ -55,6 +55,37 @@ def test_verify_rejects_invalid_directory(tmp_path: Path) -> None:
         verify(tmp_path / "missing")
 
 
+def test_incidental_verify_file_without_makefile_is_not_a_pass(tmp_path: Path) -> None:
+    """Dead-check regression: a plain file named `verify` and no Makefile makes
+    `make verify` exit 0 ('Nothing to be done'). That is verification success
+    with nothing verified (F-004). It must be `unknown`, never a pass."""
+    (tmp_path / "verify").write_text("not a makefile target\n")
+    result = verify(tmp_path)
+    assert result.evidence == "unknown"
+    assert result.exit_code is None
+    assert not result.passed
+
+
+def test_real_makefile_verify_target_executes_and_can_pass(tmp_path: Path) -> None:
+    """Positive control: a genuine Makefile `verify` target still runs and passes,
+    so the guard rejects the dead case without breaking the live one."""
+    (tmp_path / "Makefile").write_text("verify:\n\t@true\n")
+    result = verify(tmp_path)
+    assert result.evidence == "executed"
+    assert result.exit_code == 0
+    assert result.passed
+
+
+def test_real_makefile_verify_target_that_fails_is_not_a_pass(tmp_path: Path) -> None:
+    """Negative control: a genuine `verify` target that fails is executed and
+    not a pass -- distinct from the dead-check unknown."""
+    (tmp_path / "Makefile").write_text("verify:\n\t@false\n")
+    result = verify(tmp_path)
+    assert result.evidence == "executed"
+    assert result.exit_code != 0
+    assert not result.passed
+
+
 def test_timeout_retains_output_and_is_not_a_pass(tmp_path: Path) -> None:
     (tmp_path / "slow.py").write_text("import time\nprint('STARTED', flush=True)\ntime.sleep(10)\n")
     (tmp_path / "Makefile").write_text(f'verify:\n\t@"{sys.executable}" slow.py\n')
@@ -151,3 +182,20 @@ def test_eval_isolation_preserves_verdict_across_real_git_states(
     assert json.loads(isolated.stdout) == expected
     assert protected.read_text() == "deliberately dirty\n"
     assert git("status", "--porcelain") == before
+
+
+def test_unreadable_makefile_is_not_a_pass(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """If a Makefile exists but cannot be read, the verify-target check cannot
+    confirm the target and the run is unknown, not a pass -- the guard fails
+    closed."""
+    from ai_ready.verification import runner
+
+    (tmp_path / "Makefile").write_text("verify:\n\t@true\n")
+
+    def _boom(self: Path, *a: object, **k: object) -> str:
+        raise OSError("unreadable")
+
+    monkeypatch.setattr(Path, "read_text", _boom)
+    result = runner.verify(tmp_path)
+    assert result.evidence == "unknown"
+    assert not result.passed
