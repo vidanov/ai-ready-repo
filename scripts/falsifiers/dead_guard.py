@@ -85,3 +85,70 @@ def run(
         grep_matches_both=grep_matches_both,
         ok=ok,
     )
+
+
+# ── Step 2: portable specs ───────────────────────────────────────────────────
+#
+# A spec fills the four slots declaratively, so another surface can port F-004
+# by writing a spec instead of Python. The spec carries source strings (not live
+# functions) because a falsifier registry entry has to be data, not code, to be
+# shared. run_from_spec compiles the sources and calls run().
+#
+# TRUST BOUNDARY: run_from_spec executes the spec's source strings. That is safe
+# only for specs reviewed like code (repo-local, same trust as the tests). It is
+# NOT safe for specs pulled from an untrusted party -- running a stranger's spec
+# is running a stranger's code. That is the custody problem (Step 3): a shared
+# registry needs provenance a puller can trust before any exec. Until then,
+# specs are first-party only.
+
+REQUIRED_SPEC_KEYS = {
+    "entry",  # function name defined in both sources
+    "reference_source",
+    "variant_source",
+    "probe_input",
+    "guard_pattern",
+}
+
+
+class SpecError(ValueError):
+    """A spec is malformed -- distinct from a falsifier that ran and failed.
+
+    A malformed spec is a measurement_invalid: the runner could not even look.
+    Raising rather than returning a DeadGuardResult keeps the two disjoint.
+    """
+
+
+def _compile_entry(source: str, entry: str) -> Callable[..., Any]:
+    ns: dict[str, Any] = {}
+    exec(source, ns)  # noqa: S102 - first-party reviewed spec source only
+    fn = ns.get(entry)
+    if not callable(fn):
+        raise SpecError(f"spec entry {entry!r} is not a callable in its source")
+    return fn
+
+
+def run_from_spec(spec: dict[str, Any]) -> DeadGuardResult:
+    """Run the F-004 falsifier from a declarative spec.
+
+    The spec is data: source strings, a probe input, a grep pattern, and the
+    entry-point name. This is the portability layer -- a second surface writes a
+    spec, not code, and gets the same run() verdict.
+    """
+    missing = REQUIRED_SPEC_KEYS - spec.keys()
+    if missing:
+        raise SpecError(f"spec missing required keys: {sorted(missing)}")
+    if not isinstance(spec["probe_input"], dict):
+        raise SpecError("spec probe_input must be a mapping of kwargs")
+
+    entry = spec["entry"]
+    reference_fn = _compile_entry(spec["reference_source"], entry)
+    dead_variant_fn = _compile_entry(spec["variant_source"], entry)
+
+    return run(
+        reference_fn=reference_fn,
+        dead_variant_fn=dead_variant_fn,
+        probe_input=spec["probe_input"],
+        guard_pattern=spec["guard_pattern"],
+        reference_source=spec["reference_source"],
+        variant_source=spec["variant_source"],
+    )
