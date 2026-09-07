@@ -23,6 +23,8 @@ caller (see scripts/eval_tasks/dead_guard_verify.py), not here.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -118,27 +120,114 @@ class SpecError(ValueError):
     """
 
 
+class UntrustedSpecError(SpecError):
+    """A spec is well-formed but its content hash is not in the trusted set.
+
+    Refuse-to-exec by default. This is the custody rung (Step 3): running a
+    spec is running its source, so a spec whose exact bytes were not approved
+    must not run. Distinct from SpecError (malformed) so a caller can tell
+    "I could not parse this" from "I parsed it and refuse to run it."
+
+    What this does and does not buy, stated plainly:
+      - It DOES make the trust decision explicit and content-addressed: the id
+        is a hash of exactly the bytes that get exec'd, so one changed
+        character is a different id and a re-approval.
+      - It does NOT make the trusted manifest itself unforgeable. Whoever can
+        write trusted_specs.json can approve anything. Making the manifest
+        tamper-evident is a substrate guarantee (an append-only bit, a
+        signature) that lives below this code -- ox-alpha-big-pickle's log bit
+        on 1f916 #4230 is exactly that layer. This function creates the surface
+        that substrate attaches to; it does not replace it.
+    """
+
+
+# Fields that are EXECUTED or that change the falsifier's behaviour. The id
+# hashes exactly these. Attribution fields (name, source, class) are metadata:
+# they describe the spec, they do not run, and changing an attribution line
+# must NOT silently re-key a spec that would still exec identical bytes.
+_ID_FIELDS = ("entry", "reference_source", "variant_source", "probe_input", "guard_pattern")
+
+
+def spec_id(spec: dict[str, Any]) -> str:
+    """Content hash over the trust-relevant (executed) fields of a spec.
+
+    Two specs with the same executable content have the same id regardless of
+    their attribution lines; one changed byte in any executed field is a
+    different id. This is what a trust decision and a substrate signature both
+    attach to.
+    """
+    missing = set(_ID_FIELDS) - spec.keys()
+    if missing:
+        raise SpecError(f"cannot id a spec missing executed fields: {sorted(missing)}")
+    payload = {k: spec[k] for k in _ID_FIELDS}
+    # sort_keys so the id is stable across dict orderings; separators fixed so
+    # whitespace cannot shift the hash without changing content.
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def load_trusted_ids(manifest_path: Any) -> set[str]:
+    """Load approved spec ids from a trusted manifest file.
+
+    The manifest maps spec_id -> approver info. Only the ids matter here; the
+    approver metadata is for humans reading the record. A missing manifest is
+    an empty trust set (nothing is trusted), not an error: refuse-by-default.
+    """
+    from pathlib import Path
+
+    p = Path(manifest_path)
+    if not p.is_file():
+        return set()
+    try:
+        data = json.loads(p.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        raise SpecError(f"trusted manifest unreadable: {exc}") from exc
+    entries = data.get("trusted") if isinstance(data, dict) else None
+    if not isinstance(entries, dict):
+        raise SpecError("trusted manifest has no 'trusted' map of id -> approver")
+    return set(entries.keys())
+
+
 def _compile_entry(source: str, entry: str) -> Callable[..., Any]:
     ns: dict[str, Any] = {}
-    exec(source, ns)  # noqa: S102 - first-party reviewed spec source only
+    exec(source, ns)  # noqa: S102 - executed only after the id is trusted (see run_from_spec)
     fn = ns.get(entry)
     if not callable(fn):
         raise SpecError(f"spec entry {entry!r} is not a callable in its source")
     return fn
 
 
-def run_from_spec(spec: dict[str, Any]) -> DeadGuardResult:
-    """Run the F-004 falsifier from a declarative spec.
+def run_from_spec(
+    spec: dict[str, Any],
+    trusted_ids: set[str] | None = None,
+) -> DeadGuardResult:
+    """Run the F-004 falsifier from a declarative spec, refusing untrusted ones.
 
     The spec is data: source strings, a probe input, a grep pattern, and the
     entry-point name. This is the portability layer -- a second surface writes a
     spec, not code, and gets the same run() verdict.
+
+    trusted_ids is the custody gate (Step 3). If provided, the spec's content id
+    must be in it or the spec is refused before any source is exec'd. If None,
+    the caller is asserting first-party trust explicitly (the old Step-2
+    behaviour) -- callers running third-party specs MUST pass a trusted set.
     """
     missing = REQUIRED_SPEC_KEYS - spec.keys()
     if missing:
         raise SpecError(f"spec missing required keys: {sorted(missing)}")
     if not isinstance(spec["probe_input"], dict):
         raise SpecError("spec probe_input must be a mapping of kwargs")
+
+    # Custody gate: refuse before exec if a trust set was supplied and this
+    # spec's content id is not in it. The id is computed over executed fields
+    # only, so a spec cannot dodge the gate by editing its attribution.
+    if trusted_ids is not None:
+        sid = spec_id(spec)
+        if sid not in trusted_ids:
+            raise UntrustedSpecError(
+                f"spec {sid} is not in the trusted set; refusing to exec its source. "
+                "Approve it in the trusted manifest, or run first-party only."
+            )
 
     entry = spec["entry"]
     reference_fn = _compile_entry(spec["reference_source"], entry)
