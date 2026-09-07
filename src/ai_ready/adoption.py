@@ -81,11 +81,37 @@ def _node_commands(root: Path) -> tuple[dict[str, str], list[str]]:
     return commands, gaps
 
 
+def _discover_python_paths(root: Path) -> list[str]:
+    """Directories the Python checks must cover.
+
+    src and tests when present. For a flat layout (no src/), also every
+    top-level package directory (one holding __init__.py), so application code
+    like `mypackage/` is scoped -- not just `tests/`. Without this, a flat
+    project generates `ruff check tests`, and lint violations in the application
+    package escape the check entirely: a coverage gap in generated verification.
+    """
+    paths = [name for name in ("src", "tests") if (root / name).is_dir()]
+    if "src" not in paths:
+        for child in sorted(root.iterdir()):
+            if (
+                child.is_dir()
+                and child.name != "tests"
+                and not child.name.startswith(".")
+                and (child / "__init__.py").is_file()
+            ):
+                paths.append(child.name)
+    # De-dupe while preserving order; fall back to the whole tree if nothing found.
+    seen: dict[str, None] = {}
+    for name in paths:
+        seen.setdefault(name, None)
+    return list(seen) or ["."]
+
+
 def _python_commands(root: Path) -> tuple[dict[str, str], list[str]]:
     path = root / "pyproject.toml"
     config = tomllib.loads(path.read_text()) if path.is_file() else {}
     tools = config.get("tool", {})
-    paths = [name for name in ("src", "tests") if (root / name).is_dir()] or ["."]
+    paths = _discover_python_paths(root)
     scope = " ".join(paths)
     commands = {}
     gaps = []
