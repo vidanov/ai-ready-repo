@@ -429,13 +429,29 @@ def test_cli_newly_invalid_row_fails_above_coverage_floor(tmp_path, monkeypatch)
 
 
 def test_cli_no_baseline_invalid_set_prints_skip_note(tmp_path, monkeypatch, capsys):
-    """A clean run with a baseline that has no invalid-row set must skip the
-    newly-invalid check (it has no prior to compare) and say so, rather than
-    passing silently."""
+    """The newly-invalid check skips only when there is no trusted prior at all:
+    the committed known_invalid.json is absent AND the runtime baseline has no
+    invalid-row set. Then it says so rather than passing silently."""
     baseline = _cli_fixture(tmp_path, monkeypatch, command="true")
     baseline.write_text('{"success_rate": 1.0, "tasks": 1}')  # no measurement_invalid_tasks
+    # No committed trusted prior either.
+    monkeypatch.setattr(run_evals, "KNOWN_INVALID_FILE", tmp_path / "absent.json")
     assert run_evals.main() == 0
     assert "newly-invalid-row regression check skipped" in capsys.readouterr().out
+
+
+def test_cli_committed_prior_enforces_the_check(tmp_path, monkeypatch, capsys):
+    """With the committed trusted prior present (empty accepted-dead set) and a
+    passing task, the check runs -- not skipped -- and the run passes. This is
+    the enforced-in-CI path: a trusted prior exists, so the check has teeth."""
+    baseline = _cli_fixture(tmp_path, monkeypatch, command="true")
+    baseline.write_text('{"success_rate": 1.0, "tasks": 1}')
+    prior = tmp_path / "known_invalid.json"
+    prior.write_text('{"measurement_invalid_tasks": []}')
+    monkeypatch.setattr(run_evals, "KNOWN_INVALID_FILE", prior)
+    assert run_evals.main() == 0
+    out = capsys.readouterr().out
+    assert "newly-invalid-row regression check skipped" not in out
 
 
 def test_cli_known_invalid_row_does_not_refire(tmp_path, monkeypatch):
@@ -448,3 +464,33 @@ def test_cli_missing_tasks_fails(tmp_path, monkeypatch):
     _cli_fixture(tmp_path, monkeypatch)
     monkeypatch.setattr(run_evals, "TASKS_DIR", tmp_path / "missing")
     assert run_evals.main() == 1
+
+
+def test_load_known_invalid_missing_file_is_none(tmp_path, monkeypatch) -> None:
+    """A missing trusted-prior file means 'cannot compare', distinct from an
+    empty reviewed set. The caller must be able to tell them apart, so a missing
+    file returns None (skip), not [] (fail on any corpse)."""
+    monkeypatch.setattr(run_evals, "KNOWN_INVALID_FILE", tmp_path / "absent.json")
+    assert run_evals.load_known_invalid() is None
+
+
+def test_load_known_invalid_empty_is_a_real_prior(tmp_path, monkeypatch) -> None:
+    """An empty reviewed set is a real prior: nothing is accepted-dead, so any
+    invalid row is a regression. It must return [] (compare), not None (skip)."""
+    f = tmp_path / "known_invalid.json"
+    f.write_text('{"measurement_invalid_tasks": []}')
+    monkeypatch.setattr(run_evals, "KNOWN_INVALID_FILE", f)
+    assert run_evals.load_known_invalid() == []
+
+
+def test_load_known_invalid_reads_accepted_rows(tmp_path, monkeypatch) -> None:
+    f = tmp_path / "known_invalid.json"
+    f.write_text('{"measurement_invalid_tasks": ["known-gap.yaml"]}')
+    monkeypatch.setattr(run_evals, "KNOWN_INVALID_FILE", f)
+    assert run_evals.load_known_invalid() == ["known-gap.yaml"]
+
+
+def test_committed_known_invalid_file_is_valid() -> None:
+    """The shipped trusted prior must load and be a real (list) prior, so the
+    newly-invalid check is enforced in CI rather than skipped."""
+    assert run_evals.load_known_invalid() == []
