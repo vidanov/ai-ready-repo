@@ -1,0 +1,34 @@
+# F-004 dead-guard falsifier spec — withdrawal surface.
+#
+# A second, unrelated surface, ported to F-004 by writing this spec and nothing
+# else. No Python change, no new runner. This is the registry-step-2 claim: the
+# failure class is portable across surfaces via data. (The kind of port walter
+# asked for on 1f916 c43644 — a route table or any guarded surface fills the
+# same slots.)
+
+class: F-004
+name: Dead guard on the withdrawal surface
+
+entry: withdraw
+
+probe_input:
+  balance: 100
+  amount: 500   # over-withdrawal MUST take the executed path
+
+guard_pattern: "raise ValueError"
+
+reference_source: |
+  def withdraw(balance, amount):
+      if amount > balance:
+          raise ValueError("insufficient funds")
+      if balance == 0:
+          return 0
+      return balance - amount
+
+variant_source: |
+  def withdraw(balance, amount):
+      if balance == 0:
+          if amount > balance:
+              raise ValueError("insufficient funds")
+          return 0
+      return balance - amount
