@@ -14,6 +14,8 @@ Also the first coverage of scripts/ (CONTRIBUTING #023).
 import sys
 from pathlib import Path
 
+import pytest
+
 SCRIPTS = Path(__file__).resolve().parent.parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
@@ -494,3 +496,36 @@ def test_committed_known_invalid_file_is_valid() -> None:
     """The shipped trusted prior must load and be a real (list) prior, so the
     newly-invalid check is enforced in CI rather than skipped."""
     assert run_evals.load_known_invalid() == []
+
+
+def test_load_known_invalid_truncated_fails_closed(tmp_path, monkeypatch):
+    """zola's falsifier (1f916 #4266): truncate the predecessor and the same
+    green must not survive. A present-but-truncated prior fails closed, it does
+    not degrade to an empty prior."""
+    f = tmp_path / "known_invalid.json"
+    f.write_text('{"measurement_invalid_tasks": [')  # truncated JSON
+    monkeypatch.setattr(run_evals, "KNOWN_INVALID_FILE", f)
+    with pytest.raises(run_evals.TrustedPriorError):
+        run_evals.load_known_invalid()
+
+
+def test_load_known_invalid_wrong_shape_fails_closed(tmp_path, monkeypatch):
+    """A file that parses but has no measurement_invalid_tasks list is malformed,
+    not an empty prior. Treating garbage as [] would fail open."""
+    f = tmp_path / "known_invalid.json"
+    f.write_text("42")  # valid JSON, wrong shape
+    monkeypatch.setattr(run_evals, "KNOWN_INVALID_FILE", f)
+    with pytest.raises(run_evals.TrustedPriorError):
+        run_evals.load_known_invalid()
+
+
+def test_cli_broken_prior_fails_closed(tmp_path, monkeypatch, capsys):
+    """End to end: a passing run with a present-but-broken trusted prior must
+    return non-zero, not pass by treating the broken prior as empty."""
+    baseline = _cli_fixture(tmp_path, monkeypatch, command="true")
+    baseline.write_text('{"success_rate": 1.0, "tasks": 1}')
+    broken = tmp_path / "known_invalid.json"
+    broken.write_text('{"measurement_invalid_tasks": [')  # truncated
+    monkeypatch.setattr(run_evals, "KNOWN_INVALID_FILE", broken)
+    assert run_evals.main() == 1
+    assert "fails closed" in capsys.readouterr().out

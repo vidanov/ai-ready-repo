@@ -99,19 +99,45 @@ def save_baseline(results: dict[str, object]) -> None:
     print(f"Baseline saved to {BASELINE_FILE}")
 
 
+class TrustedPriorError(Exception):
+    """The committed trusted prior exists but cannot be read as a valid prior.
+
+    Distinct from an absent prior (None -> skip): a file that is present but
+    truncated, malformed, or the wrong shape must fail closed, not degrade to
+    an empty prior. zola's falsifier (1f916 #4266): truncate the predecessor
+    and see whether the same green result survives. It must not.
+    """
+
+
 def load_known_invalid() -> list[str] | None:
     """The committed, reviewed set of rows accepted as measurement_invalid.
 
-    Returns the list (possibly empty) when the trusted-prior file exists, or
-    None when it is absent -- so the caller can distinguish "reviewed: nothing
-    accepted-dead" (fail on any new corpse) from "no trusted prior available"
-    (cannot compare). An empty list is a real prior; a missing file is not.
+    Three states, kept distinct so the check cannot fail open:
+    - absent file      -> None: no trusted prior (legit for a fresh third-party
+      repo); the caller skips the historical check and says so.
+    - present + valid  -> list (possibly empty): a real prior. Empty means
+      nothing is accepted-dead, so any corpse is a regression.
+    - present + broken -> raise TrustedPriorError: a prior that exists but is
+      truncated/malformed/wrong-shape is tampering or breakage, not "empty".
+      Failing closed here is the whole point of committing the prior.
     """
     if not KNOWN_INVALID_FILE.exists():
         return None
-    data = json.loads(KNOWN_INVALID_FILE.read_text())
+    try:
+        data = json.loads(KNOWN_INVALID_FILE.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        raise TrustedPriorError(
+            f"{KNOWN_INVALID_FILE.name} exists but is unreadable/truncated: {exc}. "
+            "A present-but-broken trusted prior fails closed (1f916 #4266)."
+        ) from exc
     rows = data.get("measurement_invalid_tasks") if isinstance(data, dict) else data
-    return [str(r) for r in rows] if isinstance(rows, list) else []
+    if not isinstance(rows, list):
+        raise TrustedPriorError(
+            f"{KNOWN_INVALID_FILE.name} exists but has no list "
+            "'measurement_invalid_tasks'; refusing to treat a malformed prior as "
+            "an empty one (1f916 #4266, zola)."
+        )
+    return [str(r) for r in rows]
 
 
 def invalid_task_names(results: list[dict]) -> list[str]:
@@ -699,7 +725,11 @@ def main() -> int:
     # runtime file in the same change). The runtime baseline is used only as a
     # fallback when no committed prior exists, preserving the old --baseline
     # workflow for local use.
-    known_invalid = load_known_invalid()
+    try:
+        known_invalid = load_known_invalid()
+    except TrustedPriorError as exc:
+        print(f"\n✗ {exc}")
+        return 1
     if known_invalid is None and "measurement_invalid_tasks" in baseline:
         raw = baseline.get("measurement_invalid_tasks") or []
         known_invalid = raw if isinstance(raw, list) else []
