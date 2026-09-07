@@ -10,10 +10,15 @@ second, unrelated surface and require the same verdict.
 import sys
 from pathlib import Path
 
+import pytest
+import yaml
+
 SCRIPTS = Path(__file__).resolve().parent.parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS / "falsifiers"))
 
 import dead_guard as f004  # noqa: E402
+
+SPECS_DIR = SCRIPTS / "falsifiers" / "specs"
 
 # ── A second surface, nothing to do with discounts: a withdrawal guard. ──────
 
@@ -94,3 +99,51 @@ def test_runner_falsifier_missing_grep_pattern_fails() -> None:
     )
     assert result.grep_matches_both is False
     assert result.ok is False
+
+
+# ── Step 2: portable specs run the same falsifier from data ──────────────────
+
+
+def _load_spec(name: str) -> dict:
+    return yaml.safe_load((SPECS_DIR / name).read_text())
+
+
+def test_discount_spec_runs_from_data() -> None:
+    """The discount example, expressed as a spec file, gives the F-004 verdict
+    through run_from_spec -- no hardcoded Python slots."""
+    result = f004.run_from_spec(_load_spec("dead_guard_discount.yaml"))
+    assert result.ok is True
+    assert result.reference_fires is True
+    assert result.variant_is_dead is True
+
+
+def test_withdrawal_spec_ports_f004_to_a_second_surface_via_data() -> None:
+    """The portability claim at the spec level: an unrelated surface ports F-004
+    by writing a spec and nothing else."""
+    result = f004.run_from_spec(_load_spec("dead_guard_withdrawal.yaml"))
+    assert result.ok is True
+    assert result.reference_fires is True
+    assert result.variant_is_dead is True
+
+
+def test_spec_missing_key_is_spec_error_not_a_verdict() -> None:
+    """A malformed spec is measurement_invalid, not a failed falsifier: the
+    runner could not look. It raises rather than returning ok=False."""
+    spec = _load_spec("dead_guard_discount.yaml")
+    del spec["guard_pattern"]
+    with pytest.raises(f004.SpecError):
+        f004.run_from_spec(spec)
+
+
+def test_spec_non_mapping_probe_input_is_spec_error() -> None:
+    spec = _load_spec("dead_guard_discount.yaml")
+    spec["probe_input"] = ["not", "a", "mapping"]
+    with pytest.raises(f004.SpecError):
+        f004.run_from_spec(spec)
+
+
+def test_spec_entry_not_defined_in_source_is_spec_error() -> None:
+    spec = _load_spec("dead_guard_discount.yaml")
+    spec["entry"] = "not_the_function_name"
+    with pytest.raises(f004.SpecError):
+        f004.run_from_spec(spec)
