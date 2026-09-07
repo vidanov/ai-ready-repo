@@ -81,15 +81,46 @@ SKIP_PATTERNS = [
 SKIP_RE = re.compile("|".join(SKIP_PATTERNS))
 
 
-def load_baseline() -> dict[str, float]:
+def load_baseline() -> dict[str, object]:
     if BASELINE_FILE.exists():
         return json.loads(BASELINE_FILE.read_text())
     return {}
 
 
-def save_baseline(results: dict[str, float]) -> None:
+def save_baseline(results: dict[str, object]) -> None:
     BASELINE_FILE.write_text(json.dumps(results, indent=2))
     print(f"Baseline saved to {BASELINE_FILE}")
+
+
+def invalid_task_names(results: list[dict]) -> list[str]:
+    """Names of tasks that were measurement_invalid in this run.
+
+    A load error carries no evidence and is measurement_invalid; a task whose
+    door never reached the subject is too. This is the row set the #034 second
+    acceptance condition tracks across runs: a task that was measurable before
+    and is invalid now is a newly-dead row, and that must fail a standing run
+    even if the surviving tasks still pass. (1f916 #3539: a green rate over a
+    rotting harness is the dead-check bug one level up; Current c43166: the
+    drill must re-run on every push, not once at acceptance.)
+    """
+    return sorted(
+        str(r.get("task")) for r in results if r.get("verdict") == VERDICT_MEASUREMENT_INVALID
+    )
+
+
+def newly_invalid_rows(current: list[str], baseline_invalid: list[str]) -> list[str]:
+    """Tasks invalid now that were not already known-invalid at baseline time.
+
+    The baseline records which rows were measurement_invalid when it was taken.
+    Any row invalid now that is not in that known-invalid set is a new corpse:
+    either a row that was measurable at baseline and died, or a brand-new row
+    that is invalid on arrival. Both are flagged. A brand-new invalid row is
+    treated as a regression on purpose -- it forces an explicit baseline update
+    rather than letting a new dead row slip in silently. Only a row that was
+    already invalid at baseline (a known, accepted gap) does not re-fire.
+    """
+    known_invalid = set(baseline_invalid)
+    return sorted(t for t in current if t not in known_invalid)
 
 
 def parse_codeowners() -> list[str]:
@@ -626,8 +657,40 @@ def main() -> int:
         return 1
 
     if args.baseline:
-        save_baseline({"success_rate": rate, "tasks": total})
+        save_baseline(
+            {
+                "success_rate": rate,
+                "tasks": total,
+                "measurement_invalid_tasks": invalid_task_names(results),
+            }
+        )
         return 0
+
+    # #034 second acceptance condition (Current, 1f916 c43166): a standing run
+    # must fail when a row that was measurable at baseline time has become
+    # measurement_invalid -- a corpse introduced after acceptance. The coverage
+    # floor catches a run that is mostly corpses; it does not catch a single
+    # row that quietly died while the rate stayed above the floor. This does.
+    # The baseline is the trusted prior; a run with no baseline cannot compare
+    # and says so rather than passing silently.
+    if "measurement_invalid_tasks" in baseline:
+        baseline_invalid = baseline.get("measurement_invalid_tasks") or []
+        if not isinstance(baseline_invalid, list):
+            baseline_invalid = []
+        newly_dead = newly_invalid_rows(invalid_task_names(results), baseline_invalid)
+        if newly_dead:
+            print(
+                f"\n✗ {len(newly_dead)} row(s) newly measurement_invalid vs baseline: "
+                f"{newly_dead}. A row that was measurable at baseline and is a corpse "
+                f"now is a regression the coverage floor can hide. (1f916 #3539; "
+                f"Current c43166 — re-run every push, fail on a new invalid row.)"
+            )
+            return 1
+    else:
+        print(
+            "\n  note: no baseline invalid-row set recorded; newly-invalid-row "
+            "regression check skipped. Run `--baseline` to establish the prior."
+        )
 
     print(f"\n✓ Success rate {rate:.0%} (baseline {prior_rate:.0%})")
     return 0
