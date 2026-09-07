@@ -43,10 +43,13 @@ jobs:
   drills:
     name: Drills
     runs-on: ubuntu-latest
-    # Non-gating (docs/backlog.md #022): a drill failure must be visible on
-    # every PR, not silently unrun. continue-on-error is per-step, not
-    # per-job, so one broken drill doesn't hide the others' results — each
-    # shows its own pass/fail in the checks list instead of one aggregate.
+    # Gating: each drill is its own step (not one aggregate) so a failure names
+    # the drill that broke instead of hiding among the others. A red drill fails
+    # the job and blocks the merge -- the drills prove that planted violations
+    # are rejected, so a drill that stops rejecting is a real regression, not a
+    # warning. (Was non-gating via per-step continue-on-error; that made a
+    # broken guard visible but not enforced -- a check that cannot fail the
+    # build is a check nobody has to fix.)
     steps:
       - uses: actions/checkout@v7
 
@@ -62,61 +65,46 @@ jobs:
         run: uv sync --frozen --all-extras
 
       - name: drill-import-check
-        continue-on-error: true
         run: make drill-import-check
 
       - name: drill-import-permit
-        continue-on-error: true
         run: make drill-import-permit
 
       - name: drill-transition-guard
-        continue-on-error: true
         run: make drill-transition-guard
 
       - name: drill-dead-config
-        continue-on-error: true
         run: make drill-dead-config
 
       - name: drill-deny-catalog
-        continue-on-error: true
         run: make drill-deny-catalog
 
       - name: drill-ci-coverage
-        continue-on-error: true
         run: make drill-ci-coverage
 
       - name: drill-reason-swap
-        continue-on-error: true
         run: make drill-reason-swap
 
       - name: drill-measurement-invalid
-        continue-on-error: true
         run: make drill-measurement-invalid
 
       - name: drill-verifier-isolation
-        continue-on-error: true
         run: make drill-verifier-isolation
 
       - name: drill-referent-liveness
-        continue-on-error: true
         run: make drill-referent-liveness
 
       - name: external-reader (produce witness record for drill-external-witness)
-        continue-on-error: true
         run: make external-reader
 
       - name: stamp-manifest (after external-reader)
-        continue-on-error: true
         run: make stamp-manifest
 
       - name: drill-external-witness
-        continue-on-error: true
         run: make drill-external-witness
 
       - name: verify-tamperproof
-        continue-on-error: true
         run: make verify-tamperproof
 
       - name: verify-from-git
-        continue-on-error: true
         run: make verify-from-git

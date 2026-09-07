@@ -29,7 +29,12 @@ jobs:
 
       - name: Run evaluations
         shell: bash
-        run: uv run python scripts/run_evals.py 2>&1 | tee verification-regression.txt
+        # pipefail so a non-zero exit from run_evals.py is not masked by tee's
+        # exit code -- without it, a failing eval (e.g. a newly measurement_invalid
+        # row) would still report success because tee returns 0.
+        run: |
+          set -o pipefail
+          uv run python scripts/run_evals.py 2>&1 | tee verification-regression.txt
 
       - name: Upload eval results
         uses: actions/upload-artifact@v4

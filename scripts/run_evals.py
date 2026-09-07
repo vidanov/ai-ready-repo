@@ -62,6 +62,13 @@ from pathlib import Path
 
 TASKS_DIR = Path(__file__).parent / "eval_tasks"
 BASELINE_FILE = Path(__file__).parent / "eval_baseline.json"
+# The trusted prior for the newly-invalid-row check. Unlike eval_baseline.json
+# (a runtime artifact: success_rate varies per environment, so it is gitignored),
+# this is a reviewed fact -- the set of rows known and accepted as
+# measurement_invalid. It is committed and lives on the protected branch, so a
+# push that kills a row cannot also launder it by rewriting an ignored file in
+# the same change; accepting a newly-dead row requires a reviewable edit here.
+KNOWN_INVALID_FILE = Path(__file__).parent / "eval_tasks" / "known_invalid.json"
 CODEOWNERS_FILE = Path(__file__).parent.parent / ".github" / "CODEOWNERS"
 
 VALID_ORIGINS = {"birth", "stranger", "second-incident", "live"}
@@ -90,6 +97,21 @@ def load_baseline() -> dict[str, object]:
 def save_baseline(results: dict[str, object]) -> None:
     BASELINE_FILE.write_text(json.dumps(results, indent=2))
     print(f"Baseline saved to {BASELINE_FILE}")
+
+
+def load_known_invalid() -> list[str] | None:
+    """The committed, reviewed set of rows accepted as measurement_invalid.
+
+    Returns the list (possibly empty) when the trusted-prior file exists, or
+    None when it is absent -- so the caller can distinguish "reviewed: nothing
+    accepted-dead" (fail on any new corpse) from "no trusted prior available"
+    (cannot compare). An empty list is a real prior; a missing file is not.
+    """
+    if not KNOWN_INVALID_FILE.exists():
+        return None
+    data = json.loads(KNOWN_INVALID_FILE.read_text())
+    rows = data.get("measurement_invalid_tasks") if isinstance(data, dict) else data
+    return [str(r) for r in rows] if isinstance(rows, list) else []
 
 
 def invalid_task_names(results: list[dict]) -> list[str]:
@@ -671,25 +693,34 @@ def main() -> int:
     # measurement_invalid -- a corpse introduced after acceptance. The coverage
     # floor catches a run that is mostly corpses; it does not catch a single
     # row that quietly died while the rate stayed above the floor. This does.
-    # The baseline is the trusted prior; a run with no baseline cannot compare
-    # and says so rather than passing silently.
-    if "measurement_invalid_tasks" in baseline:
-        baseline_invalid = baseline.get("measurement_invalid_tasks") or []
-        if not isinstance(baseline_invalid, list):
-            baseline_invalid = []
-        newly_dead = newly_invalid_rows(invalid_task_names(results), baseline_invalid)
+    #
+    # The trusted prior is the committed known_invalid.json on the protected
+    # branch (custody: a push cannot launder a corpse by rewriting an ignored
+    # runtime file in the same change). The runtime baseline is used only as a
+    # fallback when no committed prior exists, preserving the old --baseline
+    # workflow for local use.
+    known_invalid = load_known_invalid()
+    if known_invalid is None and "measurement_invalid_tasks" in baseline:
+        raw = baseline.get("measurement_invalid_tasks") or []
+        known_invalid = raw if isinstance(raw, list) else []
+
+    if known_invalid is not None:
+        newly_dead = newly_invalid_rows(invalid_task_names(results), known_invalid)
         if newly_dead:
             print(
-                f"\n✗ {len(newly_dead)} row(s) newly measurement_invalid vs baseline: "
+                f"\n✗ {len(newly_dead)} row(s) newly measurement_invalid vs trusted prior: "
                 f"{newly_dead}. A row that was measurable at baseline and is a corpse "
                 f"now is a regression the coverage floor can hide. (1f916 #3539; "
-                f"Current c43166 — re-run every push, fail on a new invalid row.)"
+                f"Current c43166 — re-run every push, fail on a new invalid row.) "
+                f"If this row is genuinely and acceptably dead, add it to "
+                f"{KNOWN_INVALID_FILE.name} in a reviewed change."
             )
             return 1
     else:
         print(
-            "\n  note: no baseline invalid-row set recorded; newly-invalid-row "
-            "regression check skipped. Run `--baseline` to establish the prior."
+            "\n  note: no trusted prior recorded (missing "
+            f"{KNOWN_INVALID_FILE.name} and no baseline invalid-row set); "
+            "newly-invalid-row regression check skipped."
         )
 
     print(f"\n✓ Success rate {rate:.0%} (baseline {prior_rate:.0%})")

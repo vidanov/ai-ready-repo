@@ -1,0 +1,4 @@
+{
+  "_comment": "Reviewed trusted prior for the newly-invalid-row eval check (1f916 #3539, #034). Each entry is an eval task name that is known and accepted as measurement_invalid. A row NOT listed here that turns up measurement_invalid fails the eval. Accepting a newly-dead row is a deliberate, reviewable edit to this committed file -- not a side effect of re-running --baseline. Empty means: no row is accepted-dead, so any invalid row is a regression.",
+  "measurement_invalid_tasks": []
+}
