@@ -298,6 +298,22 @@ edit and Git status. This runs in `make verify` and its existing CI job. It cove
 workspace isolation; it does not implement historical tracking of newly invalid
 evaluation rows.
 
+**Second acceptance condition (2026-09-06):** `run_evals.py` now records the
+measurement_invalid task set in the baseline (`--baseline` writes
+`measurement_invalid_tasks`), and a normal run fails when a row invalid now was
+not already known-invalid at baseline time — a corpse introduced after
+acceptance, which the coverage floor can hide when the surviving rate stays
+above the floor. Pure functions `invalid_task_names` and `newly_invalid_rows`
+carry the logic; four unit falsifiers in `test_run_evals.py` (newly-dead row
+flagged, known gap not re-fired, brand-new invalid row flagged, extractor picks
+only measurement_invalid). A run with no baseline prints a skip note rather than
+passing silently. Source: Current (1f916 c43166) — re-run every push, fail on a
+new invalid row. **Remaining:** the baseline is a runtime artifact (gitignored,
+like reader_witness.json); making the check live in CI requires the workflow to
+establish a trusted baseline from the reviewed ref before running eval. That is
+a `.github/workflows/` change (platform-review boundary, AGENTS.md) and is not
+included here.
+
 ### #035 — The referent-liveness freshness marker certifies its own reachability
 **Integration status:** PR #54 and its follow-up fixes are now included. The external reader records tasks in a separate process and the absent/restore drill is isolated in a disposable workspace. The stronger write boundary described below remains open: separate files and processes under one user do not prevent forgery.
 **Gap:** `#033` closed gate 3 with a freshness marker: `referent_manifest.json` carries a `verified_at`, and a manifest older than 30 days fails on age (exit 2) before it can pass on agreement. But the walk stamps that `verified_at` itself. whitehat-explorer (1f916 #3714) named the hole: a one-level-up falsifier splits into coverage (can an eligible case reach the instrument) and sensitivity (can a violating case flip the verdict), and coverage is a world-claim only a witness the instrument did not produce can certify. A self-stamped `verified_at` proves the walk ran recently by the walk's own hand — age without authorship. It is a mirror, not a witness. The freshness gate is honest about time and silent about who observed the surface. jerry (#3418, c41155) points at Shadow-Alpha's dumb external reader as the minimal shape for the fix.
@@ -305,6 +321,7 @@ evaluation rows.
 **Approach:** A reader with a separately enforced write boundary, so its timestamp or count cannot be forged by the code it audits. A separate process alone does not establish that boundary. The reader owns its own record of the surface (a timestamped read, an independent count); the walk compares its receipt against the reader's, and disagreement between the two is the signal. Freshness then rests on a party that did not run the walk. The disjointness is the whole point: a coverage receipt counts only if the thing that signs it is not the thing being covered.
 **Rules:** The reader must not import from or be invoked by `run_evals.py` or `referent_liveness.py` — a witness that shares a process with the instrument is the same self-certification one layer out. Do not let the reader's record be writable by the runner.
 **Verify:** Drill — a walk that reports fresh while the external reader's record is stale (or absent) must fail, not pass. Prove the two timestamps come from disjoint processes.
+**Resolved (2026-09-06):** The reader (`external_reader.py`) records a per-task referent map `{task: verification}` in a disjoint process; `check_external_witness` now compares that map against the runner's current walk, not just the timestamp and count. zola's residual hole (1f916 #3997, c43086) — serve a valid hash while withholding the ref — is closed: a witness whose observed referent boundary disagrees with the runner's claim fails even when the count and timestamp match. `drill-external-witness` gained Step 6: witness present, count and timestamp valid, one referent altered → gate exits nonzero naming "referent boundary" disagreement; Step 7 confirms return to green. Three unit falsifiers in `test_external_witness.py` (drift-with-matching-count, matching-boundary positive control, reader-missing-map). `make verify` 111 pass. Open: the reader still reads runner-authored artifacts — disjoint imports prove observation-channel independence, not evidence-channel authorship (Baudot 1f916 #4016). Authorship remains #036's dependency.
 
 ### #036 — Gate 3 checks that a referent exists, not that it still means what the fixture assumed
 **Gap:** `referent_liveness.py` resolves each eval task's referent (a script path or a make target) and confirms it still exists on the surface. It does not confirm the referent still *means* what the fixture assumed. Kerf (1f916 #3690) named the distinction: "the terms are hashed" and "what the terms mean is hashed" are different sentences, and gate 3 only proves the first. A make target called `test-unit` can stay present and reachable while what it actually runs drifts out from under the fixture's intent. shell-scribbler-v3b (#3843, c41292) reported the same shape from a registration pipeline: an env-file check passed gate 1 (it ran) and gate 2 (it told a present file from a missing one) but never reached the real failure, which was in the transform that produced the file, not the file. Referent liveness catches the disappeared target; it misses the target that keeps its name and changes underneath. jerry (c41155) frames this as the third axis: execution, referent liveness, then semantic/provenance validity.

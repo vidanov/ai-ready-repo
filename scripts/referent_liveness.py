@@ -190,6 +190,7 @@ def check_external_witness(
     manifest_verified_at: float | None,
     expected_task_count: int | None = None,
     now: float | None = None,
+    expected_referents: dict[str, str] | None = None,
 ) -> tuple[bool, str]:
     """Compare the runner's manifest against the external reader's record (#035).
 
@@ -199,9 +200,18 @@ def check_external_witness(
     This function checks a *different* process's record (reader_witness.json,
     written by external_reader.py) against the runner's manifest timestamp.
 
-    The comparison is intentionally loose: the reader and runner need not run
-    in lockstep, only within MAX_WITNESS_DRIFT_SECONDS of each other. What
-    matters is that the two records come from disjoint processes.
+    The comparison is intentionally loose on time: the reader and runner need
+    not run in lockstep, only within MAX_WITNESS_DRIFT_SECONDS of each other.
+    What matters is that the two records come from disjoint processes.
+
+    It is strict on the boundary. zola (1f916 #3997, c43086) named the residual
+    hole: a fresh timestamp and a matching count still pass while the actual
+    referent boundary the reader observed differs from the one the runner
+    claims -- "serve a valid hash while withholding the ref." A count is a
+    weaker witness than the content. When `expected_referents` is supplied,
+    the reader's independently-observed referent map must equal the runner's
+    claimed map, key for key and value for value. Agreement on the number of
+    doors is not agreement on which doors.
 
     Returns (ok, message). If READER_RECORD is absent, the gate fails: there
     is no external witness, so the only freshness evidence is the mirror.
@@ -257,6 +267,35 @@ def check_external_witness(
 
     if not isinstance(task_count, int) or isinstance(task_count, bool):
         task_count = 0
+
+    # zola's falsifier (#3997 c43086): a matching count is not a matching
+    # boundary. Compare the reader's independently-observed referent content
+    # against the runner's claim. The reader recorded {task_name: verification}
+    # in its own process; the manifest recorded the same shape by the runner.
+    # If they disagree on any door -- a withheld referent, an altered command,
+    # a task the reader saw but the runner did not -- the witness fails, even
+    # when the count and timestamp agree.
+    if expected_referents is not None:
+        reader_referents = data.get("tasks")
+        if not isinstance(reader_referents, dict):
+            return False, "external witness invalid: reader recorded no per-task referent map"
+        if reader_referents != expected_referents:
+            reader_keys = set(reader_referents)
+            claim_keys = set(expected_referents)
+            only_reader = reader_keys - claim_keys
+            only_claim = claim_keys - reader_keys
+            drifted = {
+                k for k in reader_keys & claim_keys if reader_referents[k] != expected_referents[k]
+            }
+            return (
+                False,
+                "external witness disagrees on referent boundary "
+                "(count matched, content did not): "
+                f"reader-only={sorted(only_reader)}, runner-only={sorted(only_claim)}, "
+                f"drifted={sorted(drifted)}. A matching door count is not a matching "
+                "door set (zola 1f916 #3997).",
+            )
+
     return (
         True,
         f"external witness present: {task_count} task(s), "
@@ -336,9 +375,15 @@ def main(argv: list[str]) -> int:
         print(f"MEASUREMENT_INVALID: {exc}")
         return EXIT_MEASUREMENT_INVALID
     manifest_verified_at = manifest_data.get("verified_at")
+    # The runner's current view of the surface: task name -> verification
+    # string, from this walk. The reader recorded the same shape in a disjoint
+    # process. Passing it lets the witness fail on a boundary disagreement even
+    # when the count matches (zola 1f916 #3997, c43086).
+    runner_referents = {r.task: r.verification for r in results}
     witness_ok, witness_msg = check_external_witness(
         manifest_verified_at,
         expected_task_count=len(results),
+        expected_referents=runner_referents,
     )
     print(witness_msg)
     if not witness_ok:
