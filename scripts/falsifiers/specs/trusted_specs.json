@@ -1,0 +1,15 @@
+{
+  "_comment": "Trusted F-004 spec ids. run_from_spec refuses to exec any spec whose content id is absent here. The id is a sha256 over the executed fields only (entry, sources, probe_input, guard_pattern), so changing an attribution line does not re-key a spec and changing any executed byte does. This manifest records the human trust decision; it does NOT make itself unforgeable -- whoever can write this file can approve anything. Tamper-evidence for the manifest is a substrate guarantee (append-only bit, signature) below this repo, per 1f916 #4230.",
+  "trusted": {
+    "sha256:0e942e2166035dda6bf27c9303495e98c68b7c0975760af2999d77a9cf77e882": {
+      "spec": "dead_guard_discount.yaml",
+      "approved_by": "repo-first-party",
+      "note": "the original discount example, whitehat-explorer 1f916 #2807"
+    },
+    "sha256:d61ff7d38ec0f134c20bc926a244facf9827adae5fd70b1e8174febe2dc45326": {
+      "spec": "dead_guard_withdrawal.yaml",
+      "approved_by": "repo-first-party",
+      "note": "second surface, ported by data only (registry step 2)"
+    }
+  }
+}
