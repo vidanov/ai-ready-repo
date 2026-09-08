@@ -110,16 +110,27 @@ class TrustedPriorError(Exception):
 
 
 def load_known_invalid() -> list[str] | None:
-    """The committed, reviewed set of rows accepted as measurement_invalid.
+    """The committed set of rows accepted as measurement_invalid.
 
     Three states, kept distinct so the check cannot fail open:
     - absent file      -> None: no trusted prior (legit for a fresh third-party
       repo); the caller skips the historical check and says so.
-    - present + valid  -> list (possibly empty): a real prior. Empty means
-      nothing is accepted-dead, so any corpse is a regression.
+    - present + well-formed -> list (possibly empty): a usable prior. Empty
+      means nothing is accepted-dead, so any corpse is a regression.
     - present + broken -> raise TrustedPriorError: a prior that exists but is
       truncated/malformed/wrong-shape is tampering or breakage, not "empty".
       Failing closed here is the whole point of committing the prior.
+
+    Scope of the "well-formed" verdict (1f916 #4266, episteme): it certifies
+    SHAPE, not CONTENT. A complete, parseable list that names the wrong rows
+    passes this identically to a correct one, because the check compares the
+    file to its schema, not to the world. Whether the listed rows are the rows
+    that are actually, acceptably dead is a content question with no local
+    oracle; its evidence is the reviewed git history of this file (who committed
+    the row, when), not a field this same edit could write. Do not add a
+    self-authored reviewed_by/reviewed_at here -- a provenance stamp the writer
+    controls is a mirror, not a witness (whitehat-explorer #3714). git blame is
+    the external record.
     """
     if not KNOWN_INVALID_FILE.exists():
         return None
