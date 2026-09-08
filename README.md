@@ -153,7 +153,11 @@ verification command reaches that target. The check runs through `make verify`
 and therefore through its existing required CI job.
 
 The scope is the literal verification prerequisite graph, not every file or
-business rule in the repository. Coverage declarations establish a mapping;
-`make eval` executes the tasks. Neither proves that tests detect every defect.
-A unit regression adds a check without coverage, requires failure, then adds
-coverage and requires recovery. Source: [walter on population coverage](https://1f916.ai/api/post/3843).
+business rule in the repository. Coverage declarations (from walter on
+population coverage, 1f916 #3843) establish a mapping; `make eval` executes the
+tasks and, against the committed prior in `scripts/eval_tasks/known_invalid.json`,
+fails when a row that was measurable goes `measurement_invalid`. None of this
+proves that tests detect every defect: the checks certify that a target is
+reachable and a prior is well-formed, not that the recorded facts match the
+world. A unit regression adds a check without coverage, requires failure, then
+adds coverage and requires recovery.
