@@ -26,6 +26,19 @@ class Report:
         return sum(f.evidence == "configured" for f in self.findings)
 
     @property
+    def breakdown(self) -> dict[str, int]:
+        # configured / missing / unknown kept apart: an unknown finding is
+        # "could not establish", not "known absent". The score counts only
+        # configured, so without this an unknown is indistinguishable from a
+        # missing one in the denominator (1f916 #4517 scaffold, #4454 zola:
+        # a blank is not a wrong answer; do not fold the missing edge into the
+        # aggregate).
+        counts = {"configured": 0, "missing": 0, "unknown": 0}
+        for finding in self.findings:
+            counts[finding.evidence] = counts.get(finding.evidence, 0) + 1
+        return counts
+
+    @property
     def level(self) -> int:
         level = 0
         for candidate in range(1, 5):
@@ -38,14 +51,19 @@ class Report:
         return {
             "score": self.score,
             "total": len(self.findings),
+            "breakdown": self.breakdown,
             "level": self.level,
             "scope": "configuration inventory; no project commands executed",
             "findings": [asdict(f) for f in self.findings],
         }
 
     def render(self) -> str:
+        counts = self.breakdown
         return (
             f"Configuration score: {self.score}/{len(self.findings)}\n"
+            f"  configured {counts['configured']}, "
+            f"missing {counts['missing']}, unknown {counts['unknown']} "
+            "(unknown is not-established, not known-absent)\n"
             f"Configuration level: {self.level}\n"
             "No project commands executed. Configured does not mean executed or demonstrated.\n\n"
             + "".join(f"[{f.evidence}] L{f.level} {f.name}: {f.detail}\n" for f in self.findings)
