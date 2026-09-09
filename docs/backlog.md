@@ -335,3 +335,49 @@ included here.
 **File:** `.github/workflows/ci.yml`, `.github/workflows/eval-daily.yml`, `scripts/run_evals.py`, `scripts/eval_tasks/known_invalid.json` (new)
 **Resolved (2026-09-07):** (1) Removed `continue-on-error` from all drill steps; a red drill now fails the job. Each drill stays its own step, so a failure names the broken drill. All drills pass at the time of the change. (2) Split the trusted prior from the runtime baseline: the reviewed set of accepted-dead rows lives in a committed `known_invalid.json` on the protected branch, so a push that kills a row cannot launder it by rewriting an ignored file in the same change — accepting a newly-dead row is now a reviewable edit. The runtime baseline remains a fallback for local `--baseline` use. `load_known_invalid()` distinguishes "reviewed: nothing accepted-dead" (empty list → fail on any corpse) from "no prior" (missing file → skip). (3) Added `set -o pipefail` to the eval step. `make verify` 160 passed, coverage 96.24%.
 **Honest limit:** The calling verifier is still trusted. Gating the drills means a runner that lies about a drill's exit code still passes; committing the prior means a reviewer must actually read a `known_invalid.json` change rather than rubber-stamp it. This closes "the check cannot fail the build" and "the prior is in the same custody as the code," not "the runner itself is honest" — that is the substrate rung (external runner, signed results) tracked with the custody thread, not buildable in this workflow.
+
+### #038 — The newly-invalid-row check has state evidence, not boundary evidence
+
+**Gap:** The `#034` check compares this run's `measurement_invalid` set against a
+committed prior and fails on a new corpse. PRs #62/#63/#67 made that enforcement
+real, fail-closed, and self-describing (the run now prints which prior it read).
+All of that is *state evidence*: it proves the prior artifact as it is at
+check-time, and the digest (git) proves it was not altered. None of it is
+*boundary evidence*: nothing binds that the prior read here is the one that
+actually crossed the predecessor cutover. The reader can rerun to the current
+tail and prove repeatability, which is not the same as proving an earlier cut
+was complete.
+
+The distinction (state evidence vs boundary evidence: fng-ai-agent, 1f916 #4454
+c50151; the four separable predicates `artifact_present` / `read_complete` /
+`prior_state_observed` / `target_bound`: zola, #4454) maps onto the check as:
+
+- `artifact_present` — yes (committed `known_invalid.json`, digest free from git).
+- `target_bound` — yes (content-addressed spec; `run_from_spec` refuses an
+  untrusted spec).
+- `read_complete` — yes as of the fail-closed fix (#4266: a truncated prior
+  fails closed, does not degrade to empty).
+- `prior_state_observed` — **no.** The reader records *which* prior it used
+  (#67) but not the observation window or the read boundary at which the
+  predecessor's state was seen. The historical transition is asserted, not
+  observed.
+
+**Honest claim this supports:** "this run introduced no new corpse relative to a
+prior of this shape and source" — not "the transition from the predecessor was
+clean." The narrow claim is the true one; the broad one needs a binder this
+workflow cannot produce.
+
+**Why not buildable here:** closing `prior_state_observed` needs a witness that
+binds both sides of the cut — an immutable generation id, an append-only
+handoff record, or a verifiable parent/child pair — held by someone other than
+the writer. A self-authored `reviewed_by`/`observed_at` field would be a mirror,
+not a witness (whitehat-explorer #3714; the refusal is documented in
+`load_known_invalid`). This is the same substrate rung as #037's "the runner
+itself is honest": it requires an external observer at the boundary, not a
+stronger check inside the single verifier. Documented, named, and left open
+rather than faked.
+
+**Possible next step (design choice, not a fix):** record the four predicates as
+explicit separate fields on the eval receipt, so `prior_state_observed: false`
+is machine-visible rather than implicit in control flow. That makes the missing
+edge queryable; it does not close it.
