@@ -402,6 +402,18 @@ def test_cli_success_can_create_baseline(tmp_path, monkeypatch):
     assert baseline.exists()
 
 
+def test_cli_success_reports_which_prior_was_checked(tmp_path, monkeypatch, capsys):
+    # prior_state_observed as a visible fact (1f916 #4454, zola): a clean run
+    # must name which prior the newly-invalid check ran against, not leave the
+    # reader to infer it from a bare success line.
+    _cli_fixture(tmp_path, monkeypatch, command="true")
+    assert run_evals.main() == 0
+    out = capsys.readouterr().out
+    assert "prior:" in out
+    assert "committed known_invalid.json" in out
+    assert "newly-invalid-row check enforced" in out
+
+
 def test_cli_newly_invalid_row_fails_above_coverage_floor(tmp_path, monkeypatch):
     """#034 second acceptance condition, end to end and above the floor: three
     tasks pass and one is newly measurement_invalid, so coverage is 3/4 = 75%
