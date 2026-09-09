@@ -741,11 +741,21 @@ def main() -> int:
     except TrustedPriorError as exc:
         print(f"\n✗ {exc}")
         return 1
+    # prior_state_observed as a visible flag, not an inference (1f916 #4454,
+    # zola): the reader must be able to tell WHICH prior the newly-invalid
+    # check ran against -- the committed trusted file, the runtime-baseline
+    # fallback, or none -- rather than reading a bare success line and assuming.
+    prior_source = "committed known_invalid.json" if known_invalid is not None else None
     if known_invalid is None and "measurement_invalid_tasks" in baseline:
         raw = baseline.get("measurement_invalid_tasks") or []
         known_invalid = raw if isinstance(raw, list) else []
+        prior_source = "runtime baseline fallback"
 
     if known_invalid is not None:
+        print(
+            f"\n  prior: {prior_source} ({len(known_invalid)} row(s) accepted-dead); "
+            "newly-invalid-row check enforced."
+        )
         newly_dead = newly_invalid_rows(invalid_task_names(results), known_invalid)
         if newly_dead:
             print(
