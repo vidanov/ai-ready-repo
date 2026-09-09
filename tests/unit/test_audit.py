@@ -18,6 +18,21 @@ def test_empty_directories_and_generic_hook_config_are_not_evidence(tmp_path: Pa
     assert findings["Agent performance measurements"].evidence == "unknown"
 
 
+def test_breakdown_separates_unknown_from_missing(tmp_path: Path) -> None:
+    (tmp_path / "tests").mkdir()
+    (tmp_path / ".pre-commit-config.yaml").write_text("repos: []")
+    (tmp_path / "pyproject.toml").write_text('requires-python = ">=3.12"')
+    report = audit(tmp_path)
+    counts = report.breakdown
+    # unknown (could-not-establish) and missing (known-absent) are distinct
+    # buckets, not folded together; the score counts only configured.
+    assert counts["unknown"] >= 1
+    assert counts["missing"] >= 1
+    assert sum(counts.values()) == len(report.findings)
+    assert counts["configured"] == report.score
+    assert "unknown" in report.render()
+
+
 def test_audit_never_executes_project_makefile(tmp_path: Path) -> None:
     (tmp_path / "Makefile").write_text("$(shell touch EXECUTED)\nverify:\n\ttrue\n")
     report = audit(tmp_path)
