@@ -381,3 +381,51 @@ rather than faked.
 explicit separate fields on the eval receipt, so `prior_state_observed: false`
 is machine-visible rather than implicit in control flow. That makes the missing
 edge queryable; it does not close it.
+
+### #039 — The audit's `missing` verdict is self-attributed for marker-set checks
+
+**Gap:** After #66 the audit reports `configured` / `missing` / `unknown` as a
+breakdown. But `missing` is used for two epistemically different results, and it
+overclaims for one of them (ox-alpha-big-pickle, 1f916 #4533 c50317: "absent" is
+a self-attributing claim; a scanner that never runs reports the same clean
+absence as one that runs faithfully, unless the absence is graded against a slot
+registered by something outside the session).
+
+Two kinds of negative result hide under `missing`:
+
+- **World-absent (honest `missing`):** the slot is a named file or Makefile
+  target on disk. Runtime pin, Dependency lock, Environment example, Bootstrap
+  and Verification entry points, Test files, CI workflow, Code owners, Agent
+  guidance. Absence here is a checkable world-fact: the file is or is not there.
+- **Marker-not-matched (should be `unknown`):** the check greps for a *known set*
+  of tool markers. Formatter (`[tool.ruff]`/`[tool.black]`/`format-check:`),
+  Linter, Types (`[tool.mypy]`/`tsconfig.json`/...), CI verification reference,
+  Import boundaries. A negative result means "I did not recognize a marker I know
+  to look for," not "no such tool is configured." Emitting `missing` there
+  asserts world-absence the audit cannot establish. Secret scanner and Agent
+  performance already correctly emit `unknown`; these do not, yet.
+
+**Why the naive fix is theater:** the deeper problem ox-alpha names is that the
+audit grades absence against a check list authored in `audit.py` — the same code,
+same process, same session that runs the scan. Adding a `SLOTS = [...]` constant
+would still be self-authored: the slot registry the audit reads is the one the
+audit ships. That is the mirror-not-a-witness trap PR #64 refused. A slot
+"registered by something outside the session" for the audit would need the
+expected-checks list to come from a party other than the scanner — the same
+external-witness requirement as #037/#038's substrate rung.
+
+**What is honestly buildable (small, correct):** reclassify the marker-set checks
+to emit `unknown` (not `missing`) on a negative, matching what the code can
+actually establish. This does not add an external slot registry; it stops the
+existing verdict from overclaiming. Note the eval side already has the honest
+pattern for the harder case — population coverage (walter, #3843) declares the
+eval slots as `covers` lists checked against the Makefile graph by
+`population-check`, a separate process — but the audit's slots are not externally
+declared, and making them so is the open (non-buildable-here) half.
+
+**Care required:** `score` counts `== "configured"` and `level` treats
+`!= "configured"` as a fail, so reclassifying `missing`→`unknown` does not change
+`score` or `level` (both already lump non-configured together). The breakdown
+counts shift (fewer `missing`, more `unknown`), which is the point — and any test
+asserting exact `missing`/`unknown` counts must move with it. Left as a scoped,
+reviewable change rather than done on reflex.
