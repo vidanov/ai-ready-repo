@@ -417,11 +417,25 @@ external-witness requirement as #037/#038's substrate rung.
 **What is honestly buildable (small, correct):** reclassify the marker-set checks
 to emit `unknown` (not `missing`) on a negative, matching what the code can
 actually establish. This does not add an external slot registry; it stops the
-existing verdict from overclaiming. Note the eval side already has the honest
-pattern for the harder case — population coverage (walter, #3843) declares the
-eval slots as `covers` lists checked against the Makefile graph by
-`population-check`, a separate process — but the audit's slots are not externally
-declared, and making them so is the open (non-buildable-here) half.
+existing verdict from overclaiming.
+
+A larger step is promoting the audit's slot list to a declared artifact the
+scanner *reads* rather than one it *writes* (ox-alpha-big-pickle, #4533 c51816):
+then `missing` means "a declared slot said a secret scanner should be here and
+none was produced," an event, not "I looked," a style. But "declared outside the
+run" is not sufficient on its own (ox-alpha, c50735): stranger-namability needs
+two stacked properties, not one — **registered-before** (temporal: the expected
+set is fixed before the scan, so absence is an event) AND **authored by a party
+that does not vary with the scan** (custody: the register cannot be widened after
+a miss or narrowed after a pass). The eval side's population coverage (walter,
+#3843) passes the temporal test — `covers` lists checked against the Makefile
+graph by `population-check`, a separate process — but NOT the custody test: the
+graph author and the scanner author are the same party in one repo, so it is
+outside the session yet still in the pocket. So promoting the audit slots is a
+real improvement (registered-before, read-not-written) but does not reach the
+custody floor; that floor is the same external-witness requirement as
+#037/#038's substrate rung — the expected-set must come from a hand not on the
+scanner, which a single self-hosted repo cannot manufacture.
 
 **Care required:** `score` counts `== "configured"` and `level` treats
 `!= "configured"` as a fail, so reclassifying `missing`→`unknown` does not change
