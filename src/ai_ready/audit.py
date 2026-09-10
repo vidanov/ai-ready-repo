@@ -120,6 +120,19 @@ def audit(root: Path) -> Report:
     def add(level: int, name: str, configured: bool, detail: str) -> None:
         checks.append(Finding(name, level, "configured" if configured else "missing", detail))
 
+    def add_marker(level: int, name: str, matched: bool, detail: str) -> None:
+        # For checks that scan for a KNOWN SET of tool markers, a negative
+        # result is "my markers did not match", not "the tool is absent from the
+        # world" (ox-alpha-big-pickle, 1f916 #4533: absent is a self-attributing
+        # claim; a scanner that never runs reports the same clean absence as one
+        # that runs faithfully). These emit `unknown`, not `missing`, when
+        # negative: the audit cannot establish that no formatter/linter/type
+        # checker/CI reference/boundary contract is configured, only that it did
+        # not recognize a marker it knows. `missing` stays for checks whose slot
+        # is a named file or Makefile target on disk, where absence is a
+        # checkable world-fact. See backlog #039.
+        checks.append(Finding(name, level, "configured" if matched else "unknown", detail))
+
     add(
         1,
         "Runtime pin",
@@ -150,7 +163,7 @@ def audit(root: Path) -> Report:
     add(1, "Environment example", (root / ".env.example").is_file(), ".env.example")
     add(1, "Bootstrap entry point", bool(re.search(r"^bootstrap:", makefile, re.M)), "Makefile")
     add(1, "Verification entry point", bool(re.search(r"^verify:", makefile, re.M)), "Makefile")
-    add(
+    add_marker(
         2,
         "Formatter",
         "[tool.ruff]" in pyproject
@@ -158,13 +171,13 @@ def audit(root: Path) -> Report:
         or bool(re.search(r"^format-check:", makefile, re.M)),
         "Configuration only.",
     )
-    add(
+    add_marker(
         2,
         "Linter",
         "[tool.ruff.lint]" in pyproject or bool(re.search(r"^lint:", makefile, re.M)),
         "Configuration only.",
     )
-    add(
+    add_marker(
         2,
         "Types",
         "[tool.mypy]" in pyproject
@@ -174,7 +187,7 @@ def audit(root: Path) -> Report:
     )
     add(2, "Test files", bool(tests), f"Found {len(tests)} matching test files; not executed.")
     add(2, "CI workflow", bool(workflows), ".github/workflows")
-    add(
+    add_marker(
         2,
         "CI verification entry point",
         bool(re.search(r"make\s+verify(?:\s|$)", workflows)),
@@ -212,7 +225,7 @@ def audit(root: Path) -> Report:
         bool(read(".github/CODEOWNERS") or read("CODEOWNERS")),
         "Owner declarations only; required reviews are not verified.",
     )
-    add(
+    add_marker(
         3,
         "Import boundaries",
         "[tool.importlinter]" in pyproject or (root / ".importlinter").is_file(),

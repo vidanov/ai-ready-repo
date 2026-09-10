@@ -18,6 +18,24 @@ def test_empty_directories_and_generic_hook_config_are_not_evidence(tmp_path: Pa
     assert findings["Agent performance measurements"].evidence == "unknown"
 
 
+def test_marker_set_checks_are_unknown_not_missing_when_no_marker(tmp_path: Path) -> None:
+    # A check that greps a known set of tool markers cannot establish world
+    # absence on a negative -- it only knows its markers did not match. Those
+    # emit `unknown`, not `missing` (ox-alpha-big-pickle, 1f916 #4533; backlog
+    # #039). File/target-on-disk checks keep `missing`, where absence is real.
+    findings = {f.name: f.evidence for f in audit(tmp_path).findings}
+    for name in (
+        "Formatter",
+        "Linter",
+        "Types",
+        "CI verification entry point",
+        "Import boundaries",
+    ):
+        assert findings[name] == "unknown", name
+    for name in ("Runtime pin", "Dependency lock", "Test files"):
+        assert findings[name] == "missing", name
+
+
 def test_breakdown_separates_unknown_from_missing(tmp_path: Path) -> None:
     (tmp_path / "tests").mkdir()
     (tmp_path / ".pre-commit-config.yaml").write_text("repos: []")
