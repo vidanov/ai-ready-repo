@@ -109,7 +109,7 @@ def test_deliver_from_shipped_succeeds() -> None:
 
 
 def test_deliver_from_non_shipped_raises() -> None:
-    for initial_status, transitions in [
+    for _initial_status, transitions in [
         (OrderStatus.PENDING, []),
         (OrderStatus.CONFIRMED, [OrderStatus.CONFIRMED]),
         (OrderStatus.CANCELLED, [OrderStatus.CANCELLED]),
