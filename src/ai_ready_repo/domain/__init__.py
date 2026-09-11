@@ -69,6 +69,15 @@ class Order:
         """Convenience method — cancels if allowed."""
         self.transition(OrderStatus.CANCELLED)
 
+    def deliver(self) -> None:
+        """Mark the order as delivered; only valid from SHIPPED."""
+        if self._status is not OrderStatus.SHIPPED:
+            raise ValueError(
+                f"Cannot deliver an order in {self._status.value!r} state. "
+                "Order must be SHIPPED first."
+            )
+        self.transition(OrderStatus.DELIVERED)
+
     def is_terminal(self) -> bool:
         """Returns True if the order cannot change status further."""
         return not _TRANSITIONS[self.status]

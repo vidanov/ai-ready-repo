@@ -95,3 +95,38 @@ def test_status_cannot_bypass_transition() -> None:
     with pytest.raises(AttributeError):
         order.status = OrderStatus.DELIVERED  # type: ignore[misc]
     assert order.status == OrderStatus.PENDING
+
+
+# --- deliver() tests ---
+
+
+def test_deliver_from_shipped_succeeds() -> None:
+    order = Order(customer_id="cust-1", items=["item-a"])
+    order.transition(OrderStatus.CONFIRMED)
+    order.transition(OrderStatus.SHIPPED)
+    order.deliver()
+    assert order.status == OrderStatus.DELIVERED
+
+
+def test_deliver_from_non_shipped_raises() -> None:
+    for initial_status, transitions in [
+        (OrderStatus.PENDING, []),
+        (OrderStatus.CONFIRMED, [OrderStatus.CONFIRMED]),
+        (OrderStatus.CANCELLED, [OrderStatus.CANCELLED]),
+    ]:
+        order = Order(customer_id="cust-1", items=["item-a"])
+        for s in transitions:
+            order.transition(s)
+        with pytest.raises(ValueError, match="Cannot deliver"):
+            order.deliver()
+
+
+def test_deliver_signature() -> None:
+    """deliver() takes no arguments beyond self and returns None."""
+    import inspect
+
+    sig = inspect.signature(Order.deliver)
+    params = list(sig.parameters)
+    assert params == ["self"]
+    # annotation may be the string 'None' under PEP 563 (from __future__ import annotations)
+    assert sig.return_annotation in (None, "None")
