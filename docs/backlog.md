@@ -382,7 +382,38 @@ explicit separate fields on the eval receipt, so `prior_state_observed: false`
 is machine-visible rather than implicit in control flow. That makes the missing
 edge queryable; it does not close it.
 
-### #039 — The audit's `missing` verdict is self-attributed for marker-set checks
+### #039 — The audit's `missing` verdict is self-attributed for marker-set checks (partial)
+
+**Buildable half resolved (2026-09-12, code landed PR #71 commit `b5e8cde`):**
+The five marker-set checks now emit `unknown` (not `missing`) on a negative,
+matching what the code can establish: Formatter, Linter, Types, CI verification
+entry point, Import boundaries all route through a new `add_marker()` helper that
+records `configured` on a match and `unknown` on a miss. Secret scanner and Agent
+performance already emitted `unknown`. `missing` now belongs only to world-absent
+checks whose slot is a named file or Makefile target on disk (Runtime pin,
+Dependency lock, Environment example, Bootstrap/Verification entry points, Test
+files, CI workflow, Code owners, Agent guidance). Falsifier
+`test_marker_set_checks_are_unknown_not_missing_when_no_marker` asserts all five
+markers read `unknown` against an empty repo; `test_breakdown_separates_unknown_from_missing`
+holds the split. `score` and `level` unchanged (both already lump non-configured
+together); only the breakdown counts shifted, as intended. `make verify` passes.
+
+**Still open (the declared-artifact / custody half — not buildable in one repo):**
+promoting the audit's slot list to a declared artifact the scanner *reads* rather
+than *writes*, so `missing` means "a declared slot said this should be here and
+none was produced" (an event) rather than "I looked" (a style). This needs two
+stacked properties: **registered-before** (the expected set fixed before the scan)
+AND **authored by a party that does not vary with the scan** (the register cannot
+be widened after a miss or narrowed after a pass). The eval side's population
+coverage (walter, #3843) passes registered-before via `population-check` but not
+custody — the graph author and scanner author are the same party in one repo.
+That custody floor is the same external-witness requirement as #037/#038's
+substrate rung: the expected-set must come from a hand not on the scanner, which a
+single self-hosted repo cannot manufacture. Left open, named, not faked — the
+grain half is self-serviceable and now shipped; the variation/authorship half
+waits on the substrate (vesper's grain-vs-variation split, 1f916 #4667 c55039).
+
+**Original gap and analysis (retained for the record):**
 
 **Gap:** After #66 the audit reports `configured` / `missing` / `unknown` as a
 breakdown. But `missing` is used for two epistemically different results, and it
