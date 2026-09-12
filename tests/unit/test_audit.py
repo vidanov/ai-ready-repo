@@ -51,6 +51,79 @@ def test_breakdown_separates_unknown_from_missing(tmp_path: Path) -> None:
     assert "unknown" in report.render()
 
 
+def test_score_bounds_diverge_by_the_unknown_count(tmp_path: Path) -> None:
+    # The aggregate must distinguish unknown from missing, not just the
+    # breakdown (manu, 1f916 #5003): pessimistic counts only configured,
+    # optimistic adds the unknowns, and the spread is exactly the unknown count.
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "pyproject.toml").write_text('requires-python = ">=3.12"')
+    report = audit(tmp_path)
+    low, high = report.score_bounds
+    counts = report.breakdown
+    assert low == report.score  # pessimistic == score (backward compatible)
+    assert high - low == counts["unknown"]  # spread is exactly the unknowns
+    assert high > low  # this repo has unknowns, so the score is a range
+
+
+def test_score_bounds_collapse_when_no_unknowns() -> None:
+    # A real audit always carries at least one unknown (Agent performance
+    # measurements is unconditionally unknown), so the score is always a range
+    # in practice -- the audit can never quote a single precise number, which is
+    # the honest outcome. The collapse-to-a-point path is still exercised here
+    # with synthetic findings, proving render prints a point (not a range) when
+    # unknown == 0.
+    from ai_ready.audit import Finding, Report
+
+    report = Report(
+        (
+            Finding("A", 1, "configured", ""),
+            Finding("B", 1, "missing", ""),
+        )
+    )
+    low, high = report.score_bounds
+    assert report.breakdown["unknown"] == 0
+    assert low == high == 1
+    assert "1/2" in report.render()  # a point, not a range
+    assert "spread is unknown" not in report.render()
+
+
+def test_real_audit_score_is_always_a_range(tmp_path: Path) -> None:
+    # Because Agent performance is unconditionally unknown, even a fully
+    # configured repo's score is a pair, not a point: the audit cannot claim a
+    # single measured number while it holds something it could not establish.
+    for path, body in {
+        ".python-version": "3.14",
+        "uv.lock": "",
+        ".env.example": "",
+        "Makefile": "bootstrap:\nverify:\nformat-check:\nlint:\n",
+        "pyproject.toml": "[tool.ruff]\n[tool.ruff.lint]\n[tool.mypy]\n[tool.importlinter]\n",
+        "tests/test_example.py": "def test_one(): pass\n",
+        ".github/workflows/ci.yaml": "run: make verify\nscanner: gitleaks\n",
+        ".github/CODEOWNERS": "* @owner",
+        "AGENTS.md": "Read the rules",
+        "docs/adr/decision.md": "## Verification\n",
+        "scripts/eval_tasks/check.yaml": "verification: true",
+    }.items():
+        file = tmp_path / path
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(body)
+    report = audit(tmp_path)
+    low, high = report.score_bounds
+    assert report.breakdown["unknown"] >= 1
+    assert high > low
+
+
+def test_render_shows_the_range_when_unknowns_exist(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text('requires-python = ">=3.12"')
+    rendered = audit(tmp_path).render()
+    low, high = audit(tmp_path).score_bounds
+    assert f"{low}-{high}/" in rendered
+    assert "spread is unknown, not measured absence" in rendered
+    # to_dict carries both bounds so a downstream reader can treat them apart
+    bounds = audit(tmp_path).to_dict()["score_bounds"]
+    assert bounds == {"pessimistic": low, "optimistic": high}
+
+
 def test_audit_never_executes_project_makefile(tmp_path: Path) -> None:
     (tmp_path / "Makefile").write_text("$(shell touch EXECUTED)\nverify:\n\ttrue\n")
     report = audit(tmp_path)
