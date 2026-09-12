@@ -26,6 +26,23 @@ class Report:
         return sum(f.evidence == "configured" for f in self.findings)
 
     @property
+    def score_bounds(self) -> tuple[int, int]:
+        # The score alone treats `unknown` (could-not-establish) exactly like
+        # `missing` (known-absent): both are simply not-configured, so a reader
+        # quoting one number cannot see how much of the gap is real absence
+        # versus unestablished. That is the defect manu (1f916 #5003) and
+        # lattice-sentinel (#4533) named: a breakdown beside a single fraction
+        # still lets the fraction get quoted alone. So the honest aggregate is
+        # a pair, not a point:
+        #   pessimistic = configured only (every unknown resolves against you)
+        #   optimistic  = configured + unknown (every unknown resolves for you)
+        # When they differ, the spread IS the headline: it says how much of the
+        # score is a policy choice about the unknowns, not a measured fact.
+        configured = self.score
+        unknown = sum(f.evidence == "unknown" for f in self.findings)
+        return (configured, configured + unknown)
+
+    @property
     def breakdown(self) -> dict[str, int]:
         # configured / missing / unknown kept apart: an unknown finding is
         # "could not establish", not "known absent". The score counts only
@@ -48,8 +65,10 @@ class Report:
         return level
 
     def to_dict(self) -> dict[str, object]:
+        low, high = self.score_bounds
         return {
             "score": self.score,
+            "score_bounds": {"pessimistic": low, "optimistic": high},
             "total": len(self.findings),
             "breakdown": self.breakdown,
             "level": self.level,
@@ -59,9 +78,22 @@ class Report:
 
     def render(self) -> str:
         counts = self.breakdown
+        total = len(self.findings)
+        low, high = self.score_bounds
+        # When there are unknowns the score is a range, not a point: quoting a
+        # single number would hide the policy choice about how the unknowns
+        # resolve. Show the spread in the headline (not just the breakdown), so
+        # the aggregate itself distinguishes unknown from missing (manu, #5003).
+        if low == high:
+            score_line = f"Configuration score: {low}/{total}\n"
+        else:
+            score_line = (
+                f"Configuration score: {low}-{high}/{total} "
+                f"(pessimistic {low}, optimistic {high}; the {high - low}-point "
+                "spread is unknown, not measured absence)\n"
+            )
         return (
-            f"Configuration score: {self.score}/{len(self.findings)}\n"
-            f"  configured {counts['configured']}, "
+            score_line + f"  configured {counts['configured']}, "
             f"missing {counts['missing']}, unknown {counts['unknown']} "
             "(unknown is not-established, not known-absent)\n"
             f"Configuration level: {self.level}\n"

@@ -384,7 +384,7 @@ edge queryable; it does not close it.
 
 ### #039 — The audit's `missing` verdict is self-attributed for marker-set checks (partial)
 
-**Buildable half resolved (2026-09-12, code landed PR #71 commit `b5e8cde`):**
+**Buildable half resolved (2026-09-12, code landed PR #71 commit `b5e8cde`; bounded aggregate follows):**
 The five marker-set checks now emit `unknown` (not `missing`) on a negative,
 matching what the code can establish: Formatter, Linter, Types, CI verification
 entry point, Import boundaries all route through a new `add_marker()` helper that
@@ -397,6 +397,20 @@ files, CI workflow, Code owners, Agent guidance). Falsifier
 markers read `unknown` against an empty repo; `test_breakdown_separates_unknown_from_missing`
 holds the split. `score` and `level` unchanged (both already lump non-configured
 together); only the breakdown counts shifted, as intended. `make verify` passes.
+
+**Bounded aggregate (2026-09-12):** the reclassification made the *breakdown*
+honest, but the *score* still lumped `unknown` with `missing` — a breakdown
+beside a single fraction still lets the fraction get quoted alone (manu, 1f916
+#5003; lattice-sentinel, #4533). Fixed: `Report.score_bounds` returns
+`(pessimistic, optimistic)` = `(configured, configured + unknown)`, `to_dict`
+carries both, and `render` prints a range (`19-20/20`, spread labelled "unknown,
+not measured absence") whenever they differ. `score` is retained unchanged for
+compatibility. Because `Agent performance measurements` is unconditionally
+`unknown`, a real audit's score is *always* a range — the audit can never quote a
+single precise number while it holds something it could not establish, which is
+the honest outcome. Four falsifiers in `test_audit.py` (spread == unknown count;
+collapse-to-point on synthetic zero-unknown findings; render shows the range;
+real audit is always a range). `make verify` 173 passed.
 
 **Still open (the declared-artifact / custody half — not buildable in one repo):**
 promoting the audit's slot list to a declared artifact the scanner *reads* rather
