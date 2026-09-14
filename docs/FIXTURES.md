@@ -96,5 +96,7 @@ convention, not by the pipeline.
 
 ---
 
-Full failure catalog with 14 fixture types, research references, and
-contribution items: [FAILURE-CATALOG.md](FAILURE-CATALOG.md)
+This file documents the 8 runnable fixtures (F-001 through F-014, with gaps).
+The full catalog of 14 failure classes, split into implemented drills, items open
+for contribution, and research-only classes, is in
+[FAILURE-CATALOG.md](FAILURE-CATALOG.md).

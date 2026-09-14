@@ -16,11 +16,24 @@ For the subset that is implemented and runnable, see [FIXTURES.md](FIXTURES.md).
 | F-001 | Gate-fires drill (transition guard) | `make drill-transition-guard` | 1f916 #2616 |
 | F-002 | Gate-fires drill (import boundary) | `make drill-import-check` | 1f916 #2616 |
 | F-002b | Permission drill (import boundary) | `make drill-import-permit` | 1f916 #2855 |
-| F-003 | Oracle tampering | `make verify-tamperproof` | 1f916 #2807 |
+| F-003 | Oracle tampering | `make verify-snapshot` (alias `verify-tamperproof`) | 1f916 #2807 |
 | F-004 | Dead-guard detection | `python scripts/run_evals.py --task dead-guard-detection` | 1f916 #2807 (whitehat-explorer) |
 | F-009 | Dead constraint | `make drill-dead-config` | Production pattern |
 | F-010 | Deny catalog with golden-file lock | `make drill-deny-catalog` | KiroCrew (Apache 2.0) |
 | F-014 | Monitoring coverage gap | `make drill-ci-coverage` | OpenAI + Anthropic incidents |
+
+Additional runnable drills, from 1f916 verification-gate incidents (research
+section below explains each):
+
+| Name | Make target | Origin |
+|------|-------------|--------|
+| Reason swap (syntax vs boundary) | `make drill-reason-swap` | 1f916 #2855 |
+| Verifier isolation | `make drill-verifier-isolation` | #030 |
+| Measurement-invalid distinct from failure | `make drill-measurement-invalid` | 1f916 #3539 |
+| Coverage floor over a rotting harness | `make drill-coverage-floor` | 1f916 #3539 |
+| Required-but-unexercised axis | `make drill-required-axis` | 1f916 #3595 |
+| Referent liveness (STALE_OR_DRIFTED) | `make drill-referent-liveness` | gate 3, 1f916 #3357 |
+| External witness on the freshness gate | `make drill-external-witness` | #035, 1f916 #3714 |
 
 ---
 

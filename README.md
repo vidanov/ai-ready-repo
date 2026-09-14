@@ -1,10 +1,10 @@
 # ai-ready-repo
 
 [![CI](https://github.com/vidanov/ai-ready-repo/actions/workflows/ci.yml/badge.svg)](https://github.com/vidanov/ai-ready-repo/actions/workflows/ci.yml)
-[![Open Items: 29](https://img.shields.io/badge/open_items-29-purple.svg)](docs/backlog.md)
+[![Open Items: 30](https://img.shields.io/badge/open_items-30-purple.svg)](docs/backlog.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Fixtures: 8](https://img.shields.io/badge/fixtures-8_types-orange.svg)](docs/FIXTURES.md)
-[![Ecosystems: 3](https://img.shields.io/badge/ecosystems-3_(+10_planned)-teal.svg)](docs/ECOSYSTEMS.md)
+[![Fixtures: 8](https://img.shields.io/badge/fixtures-8_runnable-orange.svg)](docs/FIXTURES.md)
+[![Ecosystems: 1 done, 2 scaffold, 10 planned](https://img.shields.io/badge/ecosystems-1_done,_2_scaffold,_10_planned-teal.svg)](docs/ECOSYSTEMS.md)
 
 A toolkit and reference example for making repository conventions executable.
 Assess an existing project, preview an adoption patch, run its checks, and prove
@@ -42,8 +42,9 @@ are not yet supported by automated adoption.
 
 Adoption is additive and deterministic. It does not overwrite existing files,
 install tools, execute the target project, or invent a Jest/ESLint setup. Missing
-commands are listed in `ADOPTION.md`; generated verification fails while setup is
-incomplete. See [the adoption guide](docs/adoption.md).
+commands are listed in the `ADOPTION.md` that adoption writes into the target
+project; generated verification fails while setup is incomplete. See
+[the adoption guide](docs/adoption.md).
 
 ## Improve with an agent
 
@@ -106,11 +107,25 @@ infrastructure → application → domain
 `Order.status` is read-only through the public API; changes use `transition()`.
 
 ```bash
-make drill-import-check       # Reject all forbidden example-layer edges
-make drill-import-permit      # Permit all legal example-layer edges
-make drill-reason-swap        # Distinguish syntax errors from boundary violations
-make drill-transition-guard  # Reject an invalid state transition
-make drill-verifier-isolation
+# Example layer boundaries and state machine
+make drill-import-check        # Reject all forbidden example-layer edges
+make drill-import-permit       # Permit all legal example-layer edges
+make drill-reason-swap         # Distinguish syntax errors from boundary violations
+make drill-transition-guard    # Reject an invalid state transition
+make drill-reachability        # Reject a status write outside transition()
+
+# Repository-level constraints
+make drill-dead-config         # Find pyproject.toml keys nothing references
+make drill-deny-catalog        # Deny catalog is locked, additive-only, patterns fire
+make drill-ci-coverage         # Every verification target runs in CI
+make drill-verifier-isolation  # Committed tests ignore working-tree edits
+
+# Verification-gate integrity (from 1f916 incidents)
+make drill-measurement-invalid # Treat an unrun check as distinct from a failure
+make drill-coverage-floor      # Refuse a green rate over a rotting harness
+make drill-required-axis       # Reject a required-but-unexercised axis
+make drill-referent-liveness   # Report a drifted-away referent as STALE_OR_DRIFTED
+make drill-external-witness    # Fail the freshness gate when the external record is absent
 ```
 
 Mutation drills run in disposable repository copies. They preserve pre-existing
