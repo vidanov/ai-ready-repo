@@ -12,6 +12,6 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 if git diff --cached --name-only | grep -q '^docs/backlog\.md$'; then
-    python3 scripts/sync_readme_badges.py
+    uv run python3 scripts/sync_readme_badges.py
     git add README.md
 fi

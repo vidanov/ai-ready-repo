@@ -54,6 +54,10 @@ typecheck: ## Run static type checker
 import-check: ## Enforce module boundary contracts
 	uv run lint-imports
 
+.PHONY: reach-check
+reach-check: ## Enforce that Order status is written only through transition() (ADR-DOMAIN-001)
+	@uv run python3 scripts/check_reachability.py
+
 # ── Tests ────────────────────────────────────────────────────────────────────
 
 .PHONY: test
@@ -85,7 +89,7 @@ security: ## Run security scan
 # ── Verification ladder ──────────────────────────────────────────────────────
 
 .PHONY: verify
-verify: format-check lint typecheck import-check test-unit validate-adrs sync-badges-check population-check ## Run complete verification (same as CI)
+verify: format-check lint typecheck import-check reach-check test-unit validate-adrs sync-badges-check population-check ## Run complete verification (same as CI)
 	@echo "✓ All checks passed"
 
 .PHONY: verify-fast
@@ -96,7 +100,7 @@ verify-fast: format-check lint typecheck import-check ## Fast verification (no t
 
 .PHONY: validate-adrs
 validate-adrs: ## Validate ADR format and required fields
-	@python3 scripts/validate_adrs.py
+	@uv run python3 scripts/validate_adrs.py
 
 # ── AI-readiness audit ───────────────────────────────────────────────────────
 
@@ -120,11 +124,11 @@ adopt-dry-run: ## Show what adopt would generate without writing files (usage: m
 
 .PHONY: sync-badges
 sync-badges: ## Recompute README's Open Items badge from docs/backlog.md and fix it in place
-	@python3 scripts/sync_readme_badges.py
+	@uv run python3 scripts/sync_readme_badges.py
 
 .PHONY: sync-badges-check
 sync-badges-check: ## Fail if README's Open Items badge is stale (no write) — run in CI
-	@python3 scripts/sync_readme_badges.py --check
+	@uv run python3 scripts/sync_readme_badges.py --check
 
 # ── Lint changed files only ──────────────────────────────────────────────────
 
@@ -149,6 +153,10 @@ drill-transition-guard: ## Prove the Order.transition() guard fires on an invali
 	@echo "→ Attempting invalid transition (pending → shipped)..."
 	@uv run python3 scripts/drill_transition_guard.py
 
+.PHONY: drill-reachability
+drill-reachability: ## Prove the reachability check convicts a status write outside transition()
+	@uv run python -m ai_ready.verification.sandbox . python3 scripts/drill_reachability.py
+
 
 
 .PHONY: drill-dead-config
@@ -172,12 +180,15 @@ drill-reason-swap: ## Check import boundaries in a disposable workspace
 drill-measurement-invalid: ## Prove the eval gate treats a corpse (unrun check) as distinct from a failure (1f916 #3539)
 	@bash scripts/drill_measurement_invalid.sh
 
+.PHONY: drill-coverage-floor
 drill-coverage-floor: ## Prove a green pass rate over a rotting harness is refused, not laundered (1f916 #3539)
 	@bash scripts/drill_coverage_floor.sh
 
+.PHONY: drill-required-axis
 drill-required-axis: ## Prove a required-but-unexercised axis is rejected, not averaged into a green rate (1f916 #3595)
 	@bash scripts/drill_required_axis.sh
 
+.PHONY: drill-referent-liveness
 drill-referent-liveness: ## Prove a fixture whose referent drifted away is reported STALE_OR_DRIFTED, not green (gate 3, 1f916 #3357)
 	@bash scripts/drill_referent_liveness.sh
 

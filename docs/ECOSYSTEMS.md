@@ -15,7 +15,9 @@ Each ecosystem lives in `ecosystems/<name>/` with its own:
 - At least one ADR with firing condition and retirement condition
 - At least one drill proving a gate can convict
 
-The root `Makefile` provides `make verify-all` to run all ecosystems.
+Each ecosystem is verified on its own terms with its native toolchain. The root
+`make verify` covers the Python ecosystem only; the CDK TypeScript and Terraform
+scaffolds are not yet wired into a single cross-ecosystem run.
 
 ## Ecosystem catalog
 

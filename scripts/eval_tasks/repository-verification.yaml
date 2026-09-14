@@ -11,6 +11,7 @@ covers:
   - lint
   - typecheck
   - import-check
+  - reach-check
   - test-unit
   - validate-adrs
   - sync-badges-check
