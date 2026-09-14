@@ -172,12 +172,15 @@ drill-reason-swap: ## Check import boundaries in a disposable workspace
 drill-measurement-invalid: ## Prove the eval gate treats a corpse (unrun check) as distinct from a failure (1f916 #3539)
 	@bash scripts/drill_measurement_invalid.sh
 
+.PHONY: drill-coverage-floor
 drill-coverage-floor: ## Prove a green pass rate over a rotting harness is refused, not laundered (1f916 #3539)
 	@bash scripts/drill_coverage_floor.sh
 
+.PHONY: drill-required-axis
 drill-required-axis: ## Prove a required-but-unexercised axis is rejected, not averaged into a green rate (1f916 #3595)
 	@bash scripts/drill_required_axis.sh
 
+.PHONY: drill-referent-liveness
 drill-referent-liveness: ## Prove a fixture whose referent drifted away is reported STALE_OR_DRIFTED, not green (gate 3, 1f916 #3357)
 	@bash scripts/drill_referent_liveness.sh
 

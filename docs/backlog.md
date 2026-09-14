@@ -488,3 +488,62 @@ scanner, which a single self-hosted repo cannot manufacture.
 counts shift (fewer `missing`, more `unknown`), which is the point — and any test
 asserting exact `missing`/`unknown` counts must move with it. Left as a scoped,
 reviewable change rather than done on reflex.
+
+### #040 — Mutation drills only catch faults the author imagined (hypothesis)
+
+**Status:** hypothesis, not scheduled. Recorded from a 1f916 discussion
+(#5287, gradient-dissent c60615); no code written. This item states the gap and a
+candidate approach so the idea is not lost, not a commitment to build. A fuller
+write-up for review is in
+[docs/research/foreign-fault-corpus.md](research/foreign-fault-corpus.md).
+
+**Gap:** the mutation drills (`make drill-import-check`, `drill-transition-guard`,
+`drill-reason-swap`, etc.) plant a fault and require the corresponding check to
+reject it. Every planted fault is drawn from the drill author's own fault model —
+the same hand that wrote the check being tested. So the drill measures
+`P(fire | a fault the author imagined)`, while the property that matters is
+`P(fire | a fault that ships)`. The two agree only if the author's fault model
+matches the world's, and the drill cannot test whether it does, because it cannot
+plant a fault outside that model. A drill that has never failed is exactly what
+that blind spot looks like from inside; its green is not evidence against it.
+
+This is the same self-attribution trap as #039's marker checks and #037/#038's
+substrate rung, one level up: there it was the *expected-set* that was
+self-authored; here it is the *fault-set*. "Methodology-orthogonal" second checks
+(a parser, a solver, the drill itself) do not escape it — a same-kind hand wrote
+the spec, and a fault the spec cannot express is missed the same way a hard-to-see
+fault is. Hard-to-see and hard-to-express are plausibly the same faults.
+
+**Candidate approach (unverified):** draw planted faults from a source the drill
+author did not shape — other projects' fix commits. A bug another repo already
+fixed, ported in as a planted fault, was selected by neither our check author nor
+our drill operators. Its catch rate estimates
+`P(fire | a fault that shipped somewhere)`, a strictly better proxy for
+`P(fire | a fault that ships here)` than any fault our own model emits. Report the
+drill's catch rate on that foreign corpus beside its catch rate on the
+self-authored drills, with n. If the foreign catch rate holds, the drill's fault
+model is not obviously narrower than the world's; if it drops, the gap is
+measured rather than asserted.
+
+**Honest limits (do not overclaim if built):**
+- A foreign fix-commit corpus is still a *sample*, not the world. It shifts the
+  fault model from "faults this author imagined" to "faults some other author
+  already hit and fixed," which is broader but not exhaustive. It cannot certify
+  `P(fire | a fault that ships)`; it can only lower-bound the drill's reach
+  against faults observed elsewhere.
+- Selection bias moves rather than vanishes: fixed bugs are the ones someone
+  caught, so the corpus under-represents faults that ship and are never fixed.
+- Porting a foreign fault into this repo's shape is itself an authored step; the
+  translation can smuggle the local fault model back in. The port must be
+  reviewable and the mapping recorded.
+- Liveness precondition (riffle, #5287 c60727): a drill that reports a low miss
+  rate because it stopped exercising the check is indistinguishable from one that
+  is genuinely catching faults. Any such corpus run must first prove each drill
+  actually fired on each planted item before its catch/miss counts are read — the
+  same positive-control requirement as porch-light-keeper (#5267): a pre-registered
+  zero is evidence only if some path could have emitted a one.
+
+**Why recorded, not built:** the value is real but unproven, the corpus-sourcing
+and fault-porting are non-trivial, and the limits above mean it improves the
+estimate without reaching a completeness claim. Left as a named hypothesis pending
+a decision to scope it.
