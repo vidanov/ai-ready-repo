@@ -547,3 +547,61 @@ measured rather than asserted.
 and fault-porting are non-trivial, and the limits above mean it improves the
 estimate without reaching a completeness claim. Left as a named hypothesis pending
 a decision to scope it.
+
+### #041 — `transition()` guard correctness is tested; guard reachability is not ✅ resolved
+
+**Status:** resolved (2026-09-14). A static reachability check now enforces the
+property the drill did not. Surfaced by the review of
+[docs/research/foreign-fault-corpus.md](research/foreign-fault-corpus.md)
+(concept #040, review round 2).
+
+**Resolved:** `scripts/check_reachability.py` is an AST scan over `src/` (domain
+layer exempt, since `transition()` and `_status` live there) that convicts direct
+writes to `.status`/`._status` (plain, augmented, and annotated assignment) with a
+`file:line` message and exit 1. It declares its reach boundary rather than
+claiming totality: dynamic writes it cannot resolve statically (`setattr(...,
+'status'/'_status', ...)`, `__dict__` subscript writes) are reported loudly as a
+cannot-decide list instead of passing silently. Wired as the `reach-check`
+prerequisite of `make verify` (so it runs in CI through the existing `verify`
+job), with a `covers: reach-check` mapping in
+`scripts/eval_tasks/repository-verification.yaml` so `population-check` authors it
+rather than failing `REFERENT_UNAUTHORED`. `make drill-reachability` plants a
+`_status` write in a disposable copy and asserts the check convicts and names it
+(positive control: a check that never rejected a real violation is
+indistinguishable from a dead one — porch-light-keeper, 1f916 #5267). Eight unit
+regressions in `tests/unit/test_reachability.py` cover the decided cases, the
+cannot-decide boundary, the comparison/`transition()` non-violations, and the
+domain exemption. `make verify` passes (176 tests).
+
+**Original gap (retained):**
+
+**Gap:** `Order.status` is protected by two different properties, and only one is
+checked. **Guard correctness** — `transition()` rejects an invalid state change —
+is exercised by `make drill-transition-guard` (plants `pending -> shipped`,
+requires rejection). **Guard reachability** — that the status field is *only ever
+written through* `transition()` — is enforced by convention alone: `_status` is a
+private field with a read-only `status` property and a docstring saying "Status
+changes go through transition(), never by direct assignment." Nothing rejects a
+caller that writes `order._status = OrderStatus.DELIVERED` directly, nor
+`object.__setattr__`, a `dataclasses.replace`, an ORM update path, or
+deserialization reconstructing the object in an arbitrary state.
+
+The correctness drill can be fully green while the reachability property is
+violated everywhere, because they are different properties. The drill's name
+(`drill-transition-guard`) implies more coverage than it has.
+
+**Candidate approach (unverified):** a separate static check that flags writes to
+the status field outside `transition()`. Like the import checker it has its own
+reach boundary (`setattr`, `__dict__` mutation, and ORM/deserialization paths are
+the statically undecidable forms), so the honest deliverable is a declared
+boundary with a loud abstention at the edge, not a totality claim — see the
+concept doc's "declare the boundary, do not claim totality" section.
+
+**Relationship to ADR-DOMAIN-001:** the order state machine ADR states the
+intended rule (change status through `transition()`); this item is about whether a
+check *enforces* it or only documents it. Read the ADR before scoping.
+
+**Why recorded, not built:** independent of the #040 estimator question; a real,
+narrow, buildable gap, but it touches domain-layer invariants and its reach
+boundary needs a design decision (reject-conservatively vs. report-cannot-decide
+at the undecidable forms). Left as a named item pending a decision to scope it.

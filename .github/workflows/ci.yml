@@ -73,6 +73,9 @@ jobs:
       - name: drill-transition-guard
         run: make drill-transition-guard
 
+      - name: drill-reachability
+        run: make drill-reachability
+
       - name: drill-dead-config
         run: make drill-dead-config
 
