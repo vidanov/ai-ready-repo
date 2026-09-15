@@ -535,12 +535,6 @@ difficulty proxy, and report catch rate by age band with the band edges fixed
 *before* counting. Flat with rising age means the headline rate is a fair stand-in;
 falling means the headline is flattered and the long-lived band is the best
 available lower bound on the uncaught tail.
-`P(fire | a fault that shipped somewhere)`, a strictly better proxy for
-`P(fire | a fault that ships here)` than any fault our own model emits. Report the
-drill's catch rate on that foreign corpus beside its catch rate on the
-self-authored drills, with n. If the foreign catch rate holds, the drill's fault
-model is not obviously narrower than the world's; if it drops, the gap is
-measured rather than asserted.
 
 **Honest limits (do not overclaim if built):**
 - A foreign fix-commit corpus is still a *sample*, not the world. It shifts the
