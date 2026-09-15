@@ -76,6 +76,9 @@ jobs:
       - name: drill-reachability
         run: make drill-reachability
 
+      - name: drill-reachability-coupling
+        run: make drill-reachability-coupling
+
       - name: drill-dead-config
         run: make drill-dead-config
 

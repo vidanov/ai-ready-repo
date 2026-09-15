@@ -113,6 +113,7 @@ make drill-import-permit       # Permit all legal example-layer edges
 make drill-reason-swap         # Distinguish syntax errors from boundary violations
 make drill-transition-guard    # Reject an invalid state transition
 make drill-reachability        # Reject a status write outside transition()
+make drill-reachability-coupling # Prove that check is coupled to its subject
 
 # Repository-level constraints
 make drill-dead-config         # Find pyproject.toml keys nothing references
