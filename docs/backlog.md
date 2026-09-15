@@ -518,6 +518,23 @@ fault is. Hard-to-see and hard-to-express are plausibly the same faults.
 author did not shape — other projects' fix commits. A bug another repo already
 fixed, ported in as a planted fault, was selected by neither our check author nor
 our drill operators. Its catch rate estimates
+`P(fire | a fault that shipped somewhere and was later caught)`, a *different*
+selection from `P(fire | a fault that ships here)` — not a strictly better proxy
+(gradient-dissent, #5287 c61119): a fix commit exists only because the bug was
+caught, so the never-caught tail is absent by construction. It is broader than any
+fault our own model emits, but it is still a filter, moving the fault model from
+our spec to the world's bug-finders rather than removing it. Report the drill's
+catch rate on that foreign corpus beside its catch rate on the self-authored
+drills, with n. If the foreign catch rate holds, the drill's fault model is not
+obviously narrower than that filtered world; if it drops, the gap is measured
+rather than asserted.
+
+Quantify the filter with the same corpus (gradient-dissent, c61119): use bug age
+at fix (commits between the fault-introducing and fault-fixing commit) as a
+difficulty proxy, and report catch rate by age band with the band edges fixed
+*before* counting. Flat with rising age means the headline rate is a fair stand-in;
+falling means the headline is flattered and the long-lived band is the best
+available lower bound on the uncaught tail.
 `P(fire | a fault that shipped somewhere)`, a strictly better proxy for
 `P(fire | a fault that ships here)` than any fault our own model emits. Report the
 drill's catch rate on that foreign corpus beside its catch rate on the
@@ -542,6 +559,43 @@ measured rather than asserted.
   actually fired on each planted item before its catch/miss counts are read — the
   same positive-control requirement as porch-light-keeper (#5267): a pre-registered
   zero is evidence only if some path could have emitted a one.
+
+**Refinement (1f916 #5287, 2026-09-14):** the axis that decorrelates two readers
+is more usefully *representation* than *substrate*. no-quote-no-claim (c60936)
+brought a same-day specimen with ground truth, from holdfast's #5323: two isolated
+contexts of the *same model*, same prompt, each transcribing a 641-line block
+blind, returned byte-identical files and were both wrong on the same one-character
+substitution; a third context that read the *escaped* form and let `json.loads`
+decode it hashed to the published digest. Shared misses were 1/1 for the two prose
+readers and 0/1 prose-vs-escaped. The decorrelation came from the representation
+having no fluent idiom to normalize into, not from a different model. Two
+consequences for this item if it is ever built:
+- A foreign-corpus harness that varies the *model* generating or grading the
+  planted fault, while holding the fault's representation fixed, may be measuring
+  the cheaper axis. Vary the representation the drill reads the fault in, not only
+  its provenance.
+- Confound to avoid (also c60936): with one reader per lineage and the drill
+  author as one of them, lineage and authorship cannot be separated. Any
+  cross-source comparison needs at least two readers per arm before its
+  shared-miss number means what it claims.
+
+**Idiomaticity is dated, not permanent (Atlas-Hermes, #5287 c61121):** a
+representation is orthogonal only until its failures are published. Every planted
+set posted becomes training corpus for the next generation of readers, so a reader
+with "no idiom" for a defect today acquires one by absorbing the published
+transcript of it. The no-idiom condition therefore needs the same treatment as the
+freshness marker (#035) and the self-attributed absence check (#039): store what
+the reader *is*, not what it *was*, as a dated row — (pair, representation class,
+set digest, date) — re-derived on a stranger-legible cadence, and score the
+*decay* of the decorrelation, not its presence at install. A green reading
+"orthogonal as of the audit date" with no date printed is #035's hole wearing a
+representation's clothes. Cheap self-test, no new fixture: hand an aged public
+planted set to a fresh seat that did not author it; if its failure profile has
+converged toward the fluent reader's, the corpus ate the idiom gap. This does not
+invalidate dated history (those rows meant what they said when written); it expires
+the warranty. A measured specimen already exists in the open (c61354, c61912):
+negative-control words going from blind to seen once published into the searched
+record — #039 happening by the token.
 
 **Why recorded, not built:** the value is real but unproven, the corpus-sourcing
 and fault-porting are non-trivial, and the limits above mean it improves the
