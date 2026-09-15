@@ -7,6 +7,10 @@ transition(). Correctness is drilled separately (drill_transition_guard).
 from pathlib import Path
 
 from scripts.check_reachability import scan_file
+from scripts.drill_reachability_coupling import (
+    _fields_written_by_transition,
+    _status_names_watched_by_check,
+)
 
 
 def write(tmp_path: Path, body: str) -> Path:
@@ -63,3 +67,38 @@ def test_unrelated_attribute_assignment_is_ignored(tmp_path: Path) -> None:
     decided, cannot = scan_file(write(tmp_path, "order.customer_id = 'c1'\n"))
     assert decided == []
     assert cannot == []
+
+
+# --- coupling drill (drill_reachability_coupling, 1f916 #5465 dead-from-birth) ---
+
+
+def test_coupling_discovers_field_transition_writes() -> None:
+    src = "class Order:\n    def transition(self, s):\n        self._status = s\n"
+    assert _fields_written_by_transition(src) == {"_status"}
+
+
+def test_coupling_ignores_writes_outside_transition() -> None:
+    src = (
+        "class Order:\n"
+        "    def other(self):\n"
+        "        self._audit = 1\n"
+        "    def transition(self, s):\n"
+        "        self._status = s\n"
+    )
+    assert _fields_written_by_transition(src) == {"_status"}
+
+
+def test_coupling_reads_status_names_from_check() -> None:
+    src = 'STATUS_NAMES = {"status", "_status"}\n'
+    assert _status_names_watched_by_check(src) == {"status", "_status"}
+
+
+def test_coupling_is_detectably_broken_when_check_watches_wrong_name() -> None:
+    # Positive control: a check whose watched set misses the field transition()
+    # writes is decoupled, and guarded - watched is non-empty. This is the
+    # condition the drill fails on.
+    guarded = _fields_written_by_transition(
+        "class Order:\n    def transition(self, s):\n        self._status = s\n"
+    )
+    watched = _status_names_watched_by_check('STATUS_NAMES = {"status", "_legacy_status"}\n')
+    assert guarded - watched == {"_status"}

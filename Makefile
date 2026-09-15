@@ -157,6 +157,10 @@ drill-transition-guard: ## Prove the Order.transition() guard fires on an invali
 drill-reachability: ## Prove the reachability check convicts a status write outside transition()
 	@uv run python -m ai_ready.verification.sandbox . python3 scripts/drill_reachability.py
 
+.PHONY: drill-reachability-coupling
+drill-reachability-coupling: ## Prove the reachability check is coupled to its subject, not a stale string
+	@uv run python3 scripts/drill_reachability_coupling.py
+
 
 
 .PHONY: drill-dead-config

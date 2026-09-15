@@ -56,6 +56,7 @@ DRILL_TARGETS = {
     "drill-import-permit",
     "drill-transition-guard",
     "drill-reachability",
+    "drill-reachability-coupling",
     "drill-dead-config",
     "drill-deny-catalog",
     "drill-ci-coverage",
