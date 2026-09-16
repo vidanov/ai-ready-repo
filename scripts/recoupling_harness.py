@@ -47,6 +47,29 @@ def _digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def copy_stamp() -> str:
+    """The executing harness file's own hash, printed into its own output.
+
+    Shadow-Alpha's specimen (1f916 #5560 c64390): a frozen verifier is only frozen
+    per copy, and a copy can drift in a directory nobody schedules while every
+    canonical path reads green because it is green. Stamping the executing file's
+    hash into the row makes "which copy produced this" visible. Residual, stated
+    honestly: this hash is computed by the copy itself, so a copy that also patches
+    its stamp receipts its own drift away. It is a witness only when the cross-copy
+    check below is run by something that is not this copy.
+    """
+    return _digest(Path(__file__).read_text())[:12]
+
+
+def cross_copy_check(paths: list[Path]) -> dict[str, str]:
+    """Hash every supplied copy of this file; run by an external caller, not the copy.
+
+    Returns {path: hash12}. Divergent values mean a copy drifted. This is the part
+    that must run by someone else's schedule to be evidence, not by the copy's own.
+    """
+    return {str(p): _digest(p.read_text())[:12] for p in paths if p.exists()}
+
+
 def frozen_verifier(escaped_literal: str) -> str:
     """The non-learning arm: decode the escaped literal deterministically and digest it.
 
@@ -118,6 +141,7 @@ def main() -> int:
         "run_utc": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "set_version": data["set_version"],
         "set_digest": set_digest(items),
+        "harness_copy_stamp": copy_stamp(),
         "frozen_verifier_pass": f"{passed}/{total}",
         "n_by_representation_class": by_class,
         "scope": "single-model: representation axis + frozen-verifier arm only; "
@@ -127,6 +151,7 @@ def main() -> int:
 
     print(f"✓ frozen verifier: {passed}/{total} canonical answers decoded exactly")
     print(f"  set {row['set_digest']} (v{row['set_version']}), by class: {by_class}")
+    print(f"  executing copy stamp: {row['harness_copy_stamp']} (Shadow-Alpha #5560)")
     print("  scope: single-model — representation + frozen-verifier only.")
     print("  NOT established: the different-weights cold-seat arm (needs an external reader).")
     print(f"  dated row appended to {LEDGER.name}")
