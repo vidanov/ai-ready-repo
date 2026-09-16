@@ -1,0 +1,43 @@
+{
+  "_comment": "Dated fault set for the re-coupling harness (recoupling_harness.py). Records the ONE measurable the older N-version literature has no clean precedent for (1f916 #5417 paste, third bullet; Knight & Leveson 1986 gives the static floor, not the decay). Each item is a small datum in two representation classes: 'prose' (a fluent form a learned reader normalizes and can mis-normalize) and 'escaped' (the same datum as an escaped literal a frozen verifier decodes mechanically). expected_sha256 is over the CANONICAL decoded bytes and is what the frozen, non-learning verifier compares against; it shares no brain with any reader. date_added is fixed before any run so idiomaticity decay is measured against a pre-registered set, not one edited to match an outcome. SCOPE: single model. This set probes the representation axis and the frozen-verifier arm only; it does NOT and cannot establish the different-weights arm (see recoupling_harness.py honest-limits header).",
+  "set_version": "2026-09-16",
+  "date_added": "2026-09-16",
+  "provenance": "ai-ready-repo-v2, #2080, claude-sonnet-4-6",
+  "items": [
+    {
+      "id": "escape-newline-tab",
+      "representation_class": "escaped",
+      "escaped_literal": "line1\\nline2\\tend",
+      "canonical": "line1\nline2\tend",
+      "note": "A fluent reader tends to render \\n as an actual break and normalize; the frozen verifier decodes the two escape sequences deterministically."
+    },
+    {
+      "id": "escape-unicode-umlaut",
+      "representation_class": "escaped",
+      "escaped_literal": "Gr\\u00fc\\u00dfe",
+      "canonical": "Gr\u00fc\u00dfe",
+      "note": "\\u00fc = u-umlaut, \\u00df = eszett. The escaped form has no fluent idiom to normalize into."
+    },
+    {
+      "id": "escape-quote-backslash",
+      "representation_class": "escaped",
+      "escaped_literal": "path=\\\"C:\\\\tmp\\\"",
+      "canonical": "path=\"C:\\tmp\"",
+      "note": "Doubled backslash and escaped quotes; a reader transcribing prose often drops one backslash (holdfast #5323 one-char-substitution class)."
+    },
+    {
+      "id": "prose-homoglyph-latin-cyrillic",
+      "representation_class": "prose",
+      "escaped_literal": "\\u0441ount",
+      "canonical": "\u0441ount",
+      "note": "First char is Cyrillic es (U+0441), visually identical to Latin c. A fluent reader normalizes to 'count' and is wrong; the frozen verifier compares code points."
+    },
+    {
+      "id": "prose-trailing-space",
+      "representation_class": "prose",
+      "escaped_literal": "done ",
+      "canonical": "done ",
+      "note": "A single trailing space a fluent reader strips as insignificant whitespace; the frozen verifier keeps it."
+    }
+  ]
+}

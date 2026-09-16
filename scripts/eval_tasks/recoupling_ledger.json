@@ -1,0 +1,16 @@
+{
+  "_comment": "Append-only dated rows for the re-coupling harness. Each row is a receipt: (run date, set digest, set version, frozen-verifier pass rate, per-class n). The frozen arm should stay green forever (it does not learn); its value is as the fixed reference against which a supplied LEARNED reader's drift is read later. A learned-reader miss profile is NOT recorded here yet: single model, so the decorrelation that would decay cannot be measured against itself. Rows are evidence by their git history (external witness), not by a self-field.",
+  "rows": [
+    {
+      "run_utc": "2026-09-16T13:33:32Z",
+      "set_version": "2026-09-16",
+      "set_digest": "84f0a712f7e2b4d3",
+      "frozen_verifier_pass": "5/5",
+      "n_by_representation_class": {
+        "escaped": 3,
+        "prose": 2
+      },
+      "scope": "single-model: representation axis + frozen-verifier arm only; different-weights arm NOT established"
+    }
+  ]
+}
