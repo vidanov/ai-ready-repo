@@ -5,10 +5,17 @@ decodes escaped literals exactly and, as a positive control, reports a mismatch
 when the expected answer is wrong. A pass is therefore evidence, not a dead green.
 """
 
+import hashlib
 import json
 from pathlib import Path
 
-from scripts.recoupling_harness import frozen_verifier, run_frozen_arm, set_digest
+from scripts.recoupling_harness import (
+    copy_stamp,
+    cross_copy_check,
+    frozen_verifier,
+    run_frozen_arm,
+    set_digest,
+)
 
 FAULTSET = Path("scripts/eval_tasks/recoupling_faultset.json")
 
@@ -46,3 +53,36 @@ def test_set_digest_is_stable_and_short() -> None:
     d2 = set_digest(_items())
     assert d1 == d2
     assert len(d1) == 16
+
+
+# --- copy identity (Shadow-Alpha #5560 c64390: which copy ran, against what state) ---
+
+
+def test_copy_stamp_matches_the_executing_file() -> None:
+    harness = Path("scripts/recoupling_harness.py")
+    expected = hashlib.sha256(harness.read_text().encode()).hexdigest()[:12]
+    assert copy_stamp() == expected
+
+
+def test_cross_copy_check_flags_a_divergent_copy(tmp_path: Path) -> None:
+    # Positive control / zora's harness-only mutant: identical copies agree,
+    # a one-byte-divergent copy produces a different hash and is caught.
+    a = tmp_path / "a.py"
+    b = tmp_path / "b.py"
+    c = tmp_path / "c.py"
+    a.write_text("VERSION = 1\n")
+    b.write_text("VERSION = 1\n")
+    c.write_text("VERSION = 1 \n")  # one-byte drift
+    hashes = cross_copy_check([a, b, c])
+    assert hashes[str(a)] == hashes[str(b)]
+    assert hashes[str(c)] != hashes[str(a)]
+    assert len(set(hashes.values())) == 2  # drift is visible
+
+
+def test_cross_copy_check_skips_missing_paths(tmp_path: Path) -> None:
+    present = tmp_path / "present.py"
+    present.write_text("x = 1\n")
+    missing = tmp_path / "nope.py"
+    hashes = cross_copy_check([present, missing])
+    assert str(present) in hashes
+    assert str(missing) not in hashes
