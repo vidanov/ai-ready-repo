@@ -697,6 +697,17 @@ but distinguishing productive from spinning attempts cleanly is non-trivial and
 the metric invites exactly the efficiency overclaim #031/#032 guard against. Left
 as a named hypothesis pending a decision to scope it.
 
+**Related literature (verified 2026-09-17):** the *soundness* positive control
+this item contrasts against already has an institutionalized form — mutation
+testing, and specifically the pseudo-tested-method line above (#043), plants a
+defect and asserts the suite convicts. The open side is the *cost* accounting for
+an agent step-runner. That literature is thin: the closest measured work prices
+regression-test and CI cost for human-authored suites, not per-attempt agent
+ledgers, so the productive-vs-spinning split proposed here appears unpublished for
+this setting. Treat the cost framing as a research gap, not a settled metric, and
+do not let it become an efficiency claim about this repo's conventions without the
+paired baseline #031 requires.
+
 ### #043 — A done-condition can certify presence without certifying behaviour
 
 **Status:** hypothesis, not scheduled. Recorded from the same 1f916 discussion
@@ -733,6 +744,27 @@ reports a 0% behaviour-verified rate rather than a flat green.
 (what counts as "exercising behaviour") is a design decision, and mislabelling
 would be worse than not labelling. Named pending a decision to scope it.
 
+**Related literature (verified 2026-09-17):** this gap has a formal name and a
+re-runnable metric that would replace hand-classifying conditions. A
+*pseudo-tested method* is one covered by the suite where no test fails when the
+method body is removed entirely — the exact operationalization of a green that
+certifies presence (Niedermayr, Juergens, Wagner, "Will My Tests Tell Me If I
+Break This Code?", 2016, arXiv:1611.07163; tool: Descartes on PITest,
+arXiv:1811.03045). The *oracle gap* — the difference between source-code coverage
+and mutation score for an element — is a published metric for "how much of my
+green rate is presence rather than behaviour" and, in a Maven observational study,
+carries information neither adequacy metric holds alone ("The Difference Between
+Coverage and Mutation Score Can Guide Testing Efforts", arXiv:2309.02395). The
+agent-benchmark form of the same defect is measured and model-relevant: PatchDiff
+found weak developer suites inflate SWE-bench resolution rates by 6.2 absolute
+points, with 28.6% of behaviorally divergent patches certainly incorrect
+(arXiv:2503.15223); SWE-ABS reports about one in five (~19.8%) top-agent "solved"
+patches semantically incorrect under strengthened suites (arXiv:2603.00520);
+UTBoost found 36 SWE-bench instances with insufficient tests and 345 erroneous
+patches labeled as passing, and 26 of 500 in SWE-bench Verified despite expert
+review (arXiv:2506.09289, ACL 2025). If this item is built, cite the oracle-gap
+metric rather than a bespoke presence/behaviour hand-classification.
+
 ### #044 — A ledger that counts only what its oracles run looks complete while a tier is invisible
 
 **Status:** hypothesis, not scheduled. Recorded from the same 1f916 discussion
@@ -767,3 +799,14 @@ manifest to report `tier-unverified`, not green.
 design decisions specific to a project's stack, so the general form is a named
 pattern rather than a drop-in check. Left as a hypothesis pending a decision to
 scope it.
+
+**Related literature (verified 2026-09-17):** the field's answer to a tier the
+oracle cannot express is external ground truth, not an enumeration of tiers you
+failed to check — differential testing against a reference (PatchDiff,
+arXiv:2503.15223) and coverage-driven plus mutation-driven suite strengthening
+(SWE-ABS, arXiv:2603.00520; UTBoost, arXiv:2506.09289) all recover the missing
+behaviour by comparing against a source the suite did not author, which matches
+the "coverage from a source I do not author" fix raised on the thread. No
+published work located that accounts for the *missing tier itself as a counted
+number* via a declared tier manifest, which is what this item proposes; the
+manifest form appears unpublished and is the part worth prototyping.
