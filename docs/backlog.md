@@ -653,3 +653,117 @@ check *enforces* it or only documents it. Read the ADR before scoping.
 narrow, buildable gap, but it touches domain-layer invariants and its reach
 boundary needs a design decision (reject-conservatively vs. report-cannot-decide
 at the undecidable forms). Left as a named item pending a decision to scope it.
+
+### #042 — The cost side of verification has no positive control
+
+**Status:** hypothesis, not scheduled. Recorded from a 1f916 discussion
+(#5675) and an observation on a real step-runner ledger; no code written. States
+the gap and a candidate so the idea is not lost, not a commitment to build.
+
+**Gap:** every check this repo ships proves *soundness* — a drill proves the
+check can reject a planted violation (positive control), #041 proves it is
+coupled to its subject, referent-liveness proves its target is live. None of it
+measures what a check *costs* against what it *catches*. #031/#032 propose to
+record `attempts_to_green` in a paired setup, but recording attempts is not the
+same as knowing what they bought. A real step-runner ledger observed this
+session (anonymized in `benchmarks/OBSERVED-DATA.md`) spent 1958 attempts to land
+558 green steps: mean 3.5 tries per green, one step at 71. That number conflates
+attempts that caught a real defect with attempts that re-ran a check which was
+flaky, mis-specified, or testing a condition already true. A check that has fired
+seventy-one times and never once caught something a cheaper check would have
+missed is not a guardian; it is a tax with a green light, and no check in this
+repo can currently tell the two apart.
+
+This is the symmetric axis to the whole drill suite: soundness has a positive
+control (a drill that never rejects anything is dead — porch-light-keeper #5267);
+*cost* has no equivalent. The missing control is: over some window, did this
+check's catches exceed its cost, and by what margin.
+
+**Candidate approach (unverified):** per green, record `attempts_productive`
+(the done-command output differed from the prior attempt — the tree moved) vs
+`attempts_spinning` (byte-identical re-run — nothing changed but the counter).
+Both are derivable from evidence rows a runner already stores. A check whose
+attempts are overwhelmingly spinning, or which has never once been the first to
+reject a real defect, is flagged as unpaid rent, not celebrated as green.
+
+**Honest limits (do not overclaim if built):** attempts-productive is a proxy for
+value, not value; a single productive attempt can still be worthless if the thing
+it verified did not matter. And the cost side cannot become an efficiency *claim*
+about this repo's conventions without the paired baseline #031 requires. This item
+measures the cost of a regime; it does not show the regime beats no regime.
+
+**Why recorded, not built:** the value signal is real and the data shape exists,
+but distinguishing productive from spinning attempts cleanly is non-trivial and
+the metric invites exactly the efficiency overclaim #031/#032 guard against. Left
+as a named hypothesis pending a decision to scope it.
+
+### #043 — A done-condition can certify presence without certifying behaviour
+
+**Status:** hypothesis, not scheduled. Recorded from the same 1f916 discussion
+(#5675) and ledger observation; no code written.
+
+**Gap:** this repo drills that a check *fires* (#009 dead-guard) and is *coupled
+to its subject* (#041), but nothing checks that a step's done-condition encodes
+the *task's actual intent*. On the observed ledger, 83% of conditions were
+existence-style (`test -f`, `grep -q`) and only 18% exercised behaviour (a test
+that runs the code). An existence check goes green when the file is present,
+which says nothing about whether it works. This is the repo's own
+passes-but-proves-nothing problem (D-103 class, porch-light-keeper #5267) arriving
+from the *authoring* end: not a dead check, but a check that was never about the
+behaviour the task named. `#009` already requires one eval task's done-condition
+be behavioral, not textual; this generalizes that from a single task into a
+measured, reported property of a whole check population.
+
+**Candidate approach (unverified):** classify each done-condition as
+`presence-only` (an existence/text predicate — the "existence-only primitive"
+shape) vs `behaviour-exercising` (runs the subject and observes an outcome), and
+report the green rate split by class rather than as one number. A presence-only
+green is not forbidden — sometimes presence is all the task asserts — but it must
+be *labelled*, so a green rate inflated by cheap existence checks cannot pass for
+behavioural assurance.
+
+**Rules:** do not auto-reject presence-only conditions; some tasks legitimately
+assert only presence. The deliverable is the split and the label, not a ban.
+
+**Verify:** a regression that feeds a mixed set of conditions and asserts the
+classifier splits them correctly, and that a population of only-existence checks
+reports a 0% behaviour-verified rate rather than a flat green.
+
+**Why recorded, not built:** cheap and useful, but the classifier's boundary
+(what counts as "exercising behaviour") is a design decision, and mislabelling
+would be worse than not labelling. Named pending a decision to scope it.
+
+### #044 — A ledger that counts only what its oracles run looks complete while a tier is invisible
+
+**Status:** hypothesis, not scheduled. Recorded from the same 1f916 discussion
+(#5675) and ledger observation; no code written.
+
+**Gap:** a verification ledger reports on the checks it can run and is silent on
+the ones it cannot express. The observed step-runner had zero browser/end-to-end
+conditions: nothing asked whether a change worked for a user through an interface,
+so an entire class of regression lived outside the measured surface while the
+green rate read as if coverage were complete. This is the inverse of a stale
+referent (#033/#036): there a check pointed at a target that moved; here a whole
+target class was never pointed at, and the absence does not announce itself. The
+repo's own principle applies — *declare the boundary, do not claim totality* (the
+concept doc; #041's cannot-decide list) — but at the level of verification *tiers*,
+not individual writes.
+
+**Candidate approach (unverified):** a declared tier manifest — unit, integration,
+end-to-end, user-facing — with each tier marked covered or explicitly
+`not-covered-here`. A change touching a surface whose tier is `not-covered-here`
+(e.g. a UI file with no e2e oracle) earns a counted `tier-unverified` marker
+rather than a silent green. The gap becomes a named, countable quantity instead of
+an invisible one, the same move #041 made for direct status writes.
+
+**Rules:** the manifest must fail loud if a tier is neither `covered` nor
+explicitly `not-covered-here` — an unlisted tier is the bug one level up (a
+coverage manifest that silently omits a tier is itself the invisible gap).
+
+**Verify:** a drill that introduces a change on an uncovered tier and requires the
+manifest to report `tier-unverified`, not green.
+
+**Why recorded, not built:** the tier taxonomy and the surface-to-tier mapping are
+design decisions specific to a project's stack, so the general form is a named
+pattern rather than a drop-in check. Left as a hypothesis pending a decision to
+scope it.

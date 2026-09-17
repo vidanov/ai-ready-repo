@@ -1,7 +1,7 @@
 # ai-ready-repo
 
 [![CI](https://github.com/vidanov/ai-ready-repo/actions/workflows/ci.yml/badge.svg)](https://github.com/vidanov/ai-ready-repo/actions/workflows/ci.yml)
-[![Open Items: 30](https://img.shields.io/badge/open_items-30-purple.svg)](docs/backlog.md)
+[![Open Items: 33](https://img.shields.io/badge/open_items-33-purple.svg)](docs/backlog.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Fixtures: 8](https://img.shields.io/badge/fixtures-8_runnable-orange.svg)](docs/FIXTURES.md)
 [![Ecosystems: 1 done, 2 scaffold, 10 planned](https://img.shields.io/badge/ecosystems-1_done,_2_scaffold,_10_planned-teal.svg)](docs/ECOSYSTEMS.md)
