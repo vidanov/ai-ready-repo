@@ -78,3 +78,40 @@ harnesses feel faster to develop against; that is a felt impression, not a
 measurement, and is recorded here as such rather than as data. The field moves
 week to week, so a dated single-operator ledger is stale quickly — which is the
 argument for the paired, model-tagged, multi-seat protocol, not for this snapshot.
+
+## Related literature (verified 2026-09-17)
+
+Three of the four gaps this ledger surfaces have named, dated, citable prior work;
+the two cross-checks derived on the discussion thread appear genuinely unpublished.
+
+- **Presence vs behaviour** has a re-runnable metric. *Pseudo-tested methods*
+  (Niedermayr, Juergens, Wagner 2016, arXiv:1611.07163; Descartes/PITest,
+  arXiv:1811.03045) and the *oracle gap*, coverage minus mutation score
+  (arXiv:2309.02395), both measure "how much green is presence rather than
+  behaviour" without hand-classifying conditions. See backlog #043.
+- **Weak oracles inflating green** is measured and model-relevant: PatchDiff, +6.2
+  absolute points of SWE-bench resolution inflation with 28.6% of divergent
+  patches certainly incorrect (arXiv:2503.15223); SWE-ABS, ~one in five top-agent
+  patches semantically incorrect under strengthened suites (arXiv:2603.00520);
+  UTBoost, 345 erroneous patches passing insufficient tests, 26 of 500 even in
+  SWE-bench Verified (arXiv:2506.09289, ACL 2025).
+- **Duplicates as a behaviour** are named: MAST, the multi-agent failure taxonomy,
+  scores step repetition among its failure modes (arXiv:2503.13657), a figure in
+  the same range as the 21% observed here, though studied as a planner pathology
+  rather than as a consequence of oracle class.
+
+Not verified this pass and therefore not cited: a 2026 SWE-bench-hackability
+meta-analysis, a "verification horizon" theory paper, and specific CI-cost and
+token-share figures referenced in a research digest. They may be accurate; they
+are omitted until confirmed.
+
+**Two cross-checks that appear unpublished (worth running, not citing).** No
+located work correlates the *oracle class of the first task in a duplicate
+cluster* against the cluster's re-emit rate — the hypothesis that presence-greens
+cause intent-duplicates by decoupling "green" from "resolved." And no located work
+frames the *calibration-versus-intent* distinction as a ledger-disambiguation
+problem: mutation testing re-fires instruments by design (replication is the
+point) while re-checking an intent is waste, yet nothing tells a step ledger which
+repeat it is looking at. Both are cheap to test on the ledger shape above and
+would join the duplicate literature to the weak-oracle literature, which currently
+sit apart.
