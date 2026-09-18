@@ -18,15 +18,16 @@ Three exclusions stated first, so this cannot be misread as a result:
 
 ## The signal: per-step attempts-to-green
 
-An append-only ledger from a step-runner, one project, 558 completed steps. Each
-step declares a re-runnable done condition and is retried until the condition
-passes or a human intervenes.
+An append-only ledger from a step-runner, one project, 612 steps. Each step
+declares a re-runnable done condition and is retried until the condition passes or
+a human intervenes.
 
-- 549 of 558 steps carry a mechanically-checkable done condition.
-- Attempts to reach green: median 2, mean 3.5, max 71.
-- 449 of 558 steps (80%) took more than one attempt.
+- 610 of 612 steps carry a mechanically-checkable done condition.
+- Attempts to reach green: median 2, mean 3.4, max 71.
+- 488 of 597 attempted steps (81%) took more than one attempt.
 - 27 steps needed ten or more attempts.
-- Total: **1958 attempts to land 558 greens.**
+- Total: **2043 attempts across the ledger.**
+- 193 of 612 steps (32%) were human-overridden after being flagged.
 
 This is a measurement of the *cost* of a verification regime. It is not a
 measurement of the regime's *value*, because the ledger records how many attempts
@@ -39,16 +40,25 @@ check that was flaky, mis-specified, or already true. See
 The raw attempts count is pushed in different directions by three properties the
 ledger does not surface on its own.
 
-- **It double-counts intent.** 51 clusters of near-duplicate task titles covered
-  117 of the 558 steps (21%), accounting for 15% of all attempts. The runner's
+- **It double-counts intent.** Near-duplicate task titles (over 0.6 token
+  overlap with an earlier step) covered 86 of the 612 steps (14%). The runner's
   exact-match and tree-fingerprint dedup guards do not catch *near*-duplicates
   (same intent, reworded), so one intent produced several checked tasks and
-  several bills. The cost is overstated by whatever fraction of that 21% was
-  genuinely redundant.
+  several bills. The figure is threshold-sensitive: an earlier looser pass on a
+  smaller snapshot reported 21%, so treat this as order-of-magnitude, not exact,
+  and as an upper bound on waste rather than a measure of it (some repeats are
+  legitimate instrument re-firing, not re-emitted intent).
 
-- **It mostly checks presence, not behaviour.** 83% of the done-conditions were
-  existence-style (a file exists, a string greps); 18% exercised behaviour. Most
-  greens certify that the thing is there, not that it works. See
+- **Its behavioural oracles are declared, not proven.** An earlier version of
+  this doc reported "83% of done-conditions were existence-style, 18% exercised
+  behaviour." That figure is withdrawn: it came from string-matching done-command
+  text and did not survive re-derivation. By the runner's actual oracle fields,
+  610 of 612 steps declare a behaviour-bearing oracle (a pre-existing test run
+  plus a scope match), so the split does not exist as stated. The corrected and
+  sharper reading: near every step *claims* a behavioural check, but whether that
+  test actually exercises the change (rather than re-running a suite that never
+  covered it) is the pseudo-tested-method question the tags cannot answer. This is
+  why the oracle-gap metric matters here, not a hand count of conditions. See
   [backlog #043](../docs/backlog.md).
 
 - **It cannot see a whole tier.** Zero browser or end-to-end conditions. Nothing
@@ -97,7 +107,8 @@ the two cross-checks derived on the discussion thread appear genuinely unpublish
   SWE-bench Verified (arXiv:2506.09289, ACL 2025).
 - **Duplicates as a behaviour** are named: MAST, the multi-agent failure taxonomy,
   scores step repetition among its failure modes (arXiv:2503.13657), a figure in
-  the same range as the 21% observed here, though studied as a planner pathology
+  the same range as the 14 to 21% observed here (threshold-dependent), though
+  studied as a planner pathology
   rather than as a consequence of oracle class.
 
 Not verified this pass and therefore not cited: a 2026 SWE-bench-hackability
