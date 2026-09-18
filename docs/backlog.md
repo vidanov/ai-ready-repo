@@ -666,8 +666,8 @@ coupled to its subject, referent-liveness proves its target is live. None of it
 measures what a check *costs* against what it *catches*. #031/#032 propose to
 record `attempts_to_green` in a paired setup, but recording attempts is not the
 same as knowing what they bought. A real step-runner ledger observed this
-session (anonymized in `benchmarks/OBSERVED-DATA.md`) spent 1958 attempts to land
-558 green steps: mean 3.5 tries per green, one step at 71. That number conflates
+session (anonymized in `benchmarks/OBSERVED-DATA.md`) spent 2043 attempts across
+612 steps: mean 3.4 tries per step, one step at 71. That number conflates
 attempts that caught a real defect with attempts that re-ran a check which was
 flaky, mis-specified, or testing a condition already true. A check that has fired
 seventy-one times and never once caught something a cheaper check would have
@@ -715,15 +715,29 @@ paired baseline #031 requires.
 
 **Gap:** this repo drills that a check *fires* (#009 dead-guard) and is *coupled
 to its subject* (#041), but nothing checks that a step's done-condition encodes
-the *task's actual intent*. On the observed ledger, 83% of conditions were
-existence-style (`test -f`, `grep -q`) and only 18% exercised behaviour (a test
-that runs the code). An existence check goes green when the file is present,
-which says nothing about whether it works. This is the repo's own
+the *task's actual intent*. A green existence check says a file is present, not
+that it works, and even a declared test oracle can be pseudo-tested: it runs but
+would not fail if the behaviour broke. This is the repo's own
 passes-but-proves-nothing problem (D-103 class, porch-light-keeper #5267) arriving
 from the *authoring* end: not a dead check, but a check that was never about the
 behaviour the task named. `#009` already requires one eval task's done-condition
 be behavioral, not textual; this generalizes that from a single task into a
 measured, reported property of a whole check population.
+
+**Correction (2026-09-18):** an earlier version of this item cited "83% of
+conditions were existence-style, 18% exercised behaviour" from the observed
+ledger. That figure did not survive re-derivation and is withdrawn. Recomputed
+against the ledger's actual oracle fields, essentially every step (610 of 612)
+declares a behaviour-bearing oracle pair (a pre-existing test run plus a scope
+match), so the raw presence-versus-behaviour split by done-command string was a
+mis-classification of how that runner records verification, not a real property.
+The corrected observation is sharper and is the reason this item stands: the
+oracle *tags* claim behaviour on ~100% of steps, but whether a `tests_pre_existing`
+oracle actually *exercises the change* rather than re-running a suite that never
+covered it is exactly the pseudo-tested-method question, and the tags cannot self
+report it. What did reproduce: 32% of steps (193 of 612) were human-overridden,
+and reaching green cost a mean of 3.4 attempts (max 71). See
+`benchmarks/OBSERVED-DATA.md` for the corrected figures.
 
 **Candidate approach (unverified):** classify each done-condition as
 `presence-only` (an existence/text predicate — the "existence-only primitive"
