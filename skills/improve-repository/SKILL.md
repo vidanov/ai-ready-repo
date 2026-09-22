@@ -37,8 +37,11 @@ extra approval steps.
    for a review, distinguish static inspection from authorized command execution.
 2. Prioritize reproducible wrong behavior, false success, broken setup, conflicting
    guidance, and missing enforcement ahead of cosmetic organization. Reuse native
-   package managers, test frameworks, and commands. Mixed projects may need
-   separate verification paths; do not silently select one stack.
+   package managers, test frameworks, and commands. Where no framework exists for
+   the layer that keeps failing, introducing the stack's conventional one is
+   integration, not competition; adding a second alongside a working one is not.
+   Mixed projects may need separate verification paths; do not silently select
+   one stack.
 3. Integrate the smallest useful changes into existing configuration. Keep one
    clear verification entry point where practical, with fast checks available
    during edits. Avoid competing instruction files or duplicate CI executions.
@@ -105,6 +108,9 @@ extra approval steps.
   require rejection; also require a legal case to pass. A guard that rejects
   everything is broken. Run mutation drills in disposable copies, preserving
   pre-existing edits. Such copies are not operating-system security sandboxes.
+  When a drill reverts a fix by editing existing source rather than adding a
+  file, assert the edit applied before trusting the result: a replacement that
+  matched nothing reports a passing drill that never ran.
 - **Check the reason, not just the exit code.** A syntax error or missing executable
   can masquerade as successful rejection of an architectural violation. Assert
   the intended failure class. Use specific exception assertions where relevant.
@@ -119,7 +125,9 @@ extra approval steps.
   A target may retain its name while its behavior changes. Recheck the intended outcome;
   a stable path or matching fingerprint alone does not establish semantic validity.
   Distinguish an observed historical transition from a label inferred only from today's
-  missing path.
+  missing path. Guidance files are fixtures too: re-check a steering file's commands,
+  endpoints and claims against the code as part of improvement, because a rule that
+  was true when written can quietly become false.
 - **The result path is part of verification.** Confirm failures survive wrappers,
   exit-code handling, logging, summaries, and display. Inspect actual response
   shapes before writing parsers; plausible empty fields can hide real nested data.
@@ -195,45 +203,13 @@ attempts alone do not establish benefit, unchanged output may reflect redundant 
 and apparent inactivity or cost alone does not authorize removing a rule. Do not
 implement these proposals merely because this skill mentions them.
 
-## Optional ai-ready toolkit
+## Reference material
 
-Use it only if already available and helpful. Pass the target explicitly:
+Load these only when they apply; they are not needed to do the work:
 
-```text
-ai-ready audit /absolute/target --json
-ai-ready adopt /absolute/target
-```
-
-From a bootstrapped toolkit checkout, use
-`uv run --project /absolute/toolkit ai-ready audit /absolute/target --json`.
-Audit describes configuration, not proven correctness, and may not recognize all
-native conventions. Adoption previews changes; `adopt --apply` creates files and
-belongs only in authorized implementation. The toolkit's `ai-ready verify` invokes
-the target's `make verify`; use native verification directly when that target does
-not exist. Do not install the toolkit or execute reference commands just because
-this skill mentions them.
-
-## Evidence limits and provenance
-
-This skill is a practical synthesis of ai-ready-repo's implementation lessons and
-selected research questions, not an exhaustive incident archive or a claim that every
-recommendation is implemented.
-Historical incident accounts are source-reported observations, not independently
-verified facts.
-Cataloged proposals and research scenarios are not implemented guarantees. If
-the source checkout is available, consult its current implementation and maintained
-docs to establish whether a particular drill exists; no source path is required
-to use this skill. Repository-specific thresholds and example commands are not
-universal recommendations.
-
-Green checks, configuration scores, and use of Make do not establish agent speed,
-token savings, security, or general reliability. For requested performance claims,
-compare representative tasks from the same initial code with identical acceptance
-checks and recorded model settings, environment, permissions, and budgets. Use
-fresh sessions, repeat and alternate pairs, retain failures and timeouts, and compare
-correctness before time, retries, tool calls, and observed token usage. Report
-sample counts and uncertainty; unavailable usage is unknown, not zero. A regression
-suite that never runs an agent cannot provide comparative agent measurements.
+- `reference/toolkit.md` — the optional `ai-ready` CLI, when it is already installed.
+- `reference/evidence-and-claims.md` — this skill's provenance, the limits of what
+  green checks establish, and how to substantiate a requested performance claim.
 
 ## Deliver the result
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "Improve Repository"
   short_description: "Apply readiness findings to existing and new projects"
-  default_prompt: "Use $improve-repository to apply the ai-ready-repo findings to this existing or new project and verify the resulting setup."
+  default_prompt: "Use $improve-repository to assess this existing or new project against the ai-ready-repo findings and, where authorized, apply and verify the resulting setup."

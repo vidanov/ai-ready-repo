@@ -89,7 +89,7 @@ security: ## Run security scan
 # ── Verification ladder ──────────────────────────────────────────────────────
 
 .PHONY: verify
-verify: format-check lint typecheck import-check reach-check test-unit validate-adrs sync-badges-check population-check ## Run complete verification (same as CI)
+verify: format-check lint typecheck import-check reach-check test-unit validate-adrs sync-badges-check population-check ## Static checks, tests, ADRs and population (NOT the drills — see verify-all)
 	@echo "✓ All checks passed"
 
 .PHONY: verify-fast
@@ -222,6 +222,49 @@ verify-from-git: ## Run unit tests from the committed copy at HEAD, not the work
 .PHONY: drill-verifier-isolation
 drill-verifier-isolation: ## Prove committed tests ignore edits in an isolated workspace
 	@bash scripts/drill_verifier_isolation.sh
+
+.PHONY: drill-skill-liveness
+drill-skill-liveness: ## Prove the shipped skill references nothing that has been moved or deleted
+	@uv run python scripts/drill_skill_liveness.py
+
+# Every drill, in one place.
+#
+# They used to be enumerated by hand in the CI workflow and nowhere else, so
+# `make verify` — the completion evidence AGENTS.md asks for — reported success
+# having run none of them, and two targets (drill-coverage-floor,
+# drill-required-axis) had drifted out of even the CI list. The whole set costs
+# a few seconds; `verify-fast` is the one that stays out of the way while
+# editing.
+DRILLS := $(shell grep -oE '^drill-[a-z-]+:' Makefile | tr -d ':' | sort -u)
+
+.PHONY: drills
+drills: ## Run every drill (proves each guard fires on a planted violation)
+	@for d in $(DRILLS); do \
+		grep -q "make $$d$$" .github/workflows/ci.yml || { \
+			echo "  ✗ $$d is a drill target that CI never runs"; \
+			echo "    add a step for it in .github/workflows/ci.yml"; \
+			exit 1; }; \
+	done
+	@for d in $(DRILLS); do \
+		printf '  %-32s' "$$d"; \
+		if $(MAKE) --no-print-directory "$$d" >/tmp/$$d.log 2>&1; then \
+			echo "ok"; \
+		else \
+			echo "FAILED"; cat /tmp/$$d.log; exit 1; \
+		fi; \
+	done
+	@echo "✓ $(words $(DRILLS)) drills passed"
+
+# What "done" means here.
+#
+# AGENTS.md asked for `make verify` as completion evidence, and verify ran none
+# of the drills — so the documented finish line was crossed without firing a
+# single guard this project exists to demonstrate. The drills cannot simply join
+# verify: an eval task runs `make verify`, and a drill runs that eval, so verify
+# must stay non-reentrant. This is the entry point that means finished.
+.PHONY: verify-all
+verify-all: verify drills ## Complete verification: everything in verify, then every drill
+	@echo "✓ Verified, and every guard fired on a planted violation"
 
 
 .PHONY: eval
