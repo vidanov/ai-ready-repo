@@ -97,6 +97,15 @@ jobs:
       - name: drill-verifier-isolation
         run: make drill-verifier-isolation
 
+      - name: drill-coverage-floor
+        run: make drill-coverage-floor
+
+      - name: drill-required-axis
+        run: make drill-required-axis
+
+      - name: drill-skill-liveness
+        run: make drill-skill-liveness
+
       - name: drill-referent-liveness
         run: make drill-referent-liveness
 
