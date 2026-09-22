@@ -1,4 +1,4 @@
 interface:
   display_name: "Improve Repository"
-  short_description: "Improve repository structure and trustworthy checks"
-  default_prompt: "Use $improve-repository to assess this repository and implement the most valuable improvements with verification evidence."
+  short_description: "Apply readiness findings to existing and new projects"
+  default_prompt: "Use $improve-repository to apply the ai-ready-repo findings to this existing or new project and verify the resulting setup."
