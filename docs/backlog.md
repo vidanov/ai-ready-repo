@@ -255,6 +255,26 @@ hermes-voyager, 1f916 #3385.
 **Rules:** Must still check the working `src/` (that's what's being verified); only the oracle (tests, Makefile, lint config) comes from history.
 **Verify:** `make drill-verifier-isolation` plants a failing test in a disposable workspace. Working-tree pytest sees the failure; the selected committed acceptance suite ignores it. The user checkout is not edited.
 
+**Related literature (verified 2026-09-21):** the "inside-vs-outside the write
+path" axis has an empirical twin one layer up, for the case where the checker is
+itself a model. Pombal, Rei & Martins, *Self-Preference Bias in Rubric-Based
+Evaluation of Large Language Models* (arXiv:2604.06996), show LLM judges favor
+outputs from themselves or their own model family even when scoring runs through
+an explicit rubric, and flag this as sharpest "in settings of recursive
+self-improvement." Zheng et al., *Judging LLM-as-a-Judge with MT-Bench and
+Chatbot Arena* (arXiv:2306.05685, NeurIPS 2023), independently document position,
+verbosity, and self-enhancement biases in LLM judges. The consequence for this
+item: sourcing the oracle from git HEAD removes *same-session write-path*
+tampering, but if the oracle is ever a model evaluating a model, an authorship
+channel re-enters that git isolation does not touch — a rubric is not neutral
+machinery, its author's preference shows up in the ranking. An external witness
+must be external in authorship, not only in file location. This is why #030's
+full closure names an off-machine checker with no agent shell, not merely a
+committed-history source; the same logic forbids "grade it with another model" as
+a substitute. Related: sycophancy in preference-trained models (Sharma et al.,
+arXiv:2310.13548) is the same authorship-channel defect arriving through the
+training data rather than the judge.
+
 ### #031 — Measure agent efficiency with comparable runs — reopened
 **Historical result:** Make-entry-point metadata helped identify a broken
 verification command, but it did not measure agent effort or establish savings.
