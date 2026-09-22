@@ -10,6 +10,11 @@ A toolkit and reference example for making repository conventions executable.
 Assess an existing project, preview an adoption patch, run its checks, and prove
 that important constraints reject violations.
 
+> **New here, or reading as a human rather than an agent?** Start with the
+> [plain-language guide](docs/EXPLAINED.md). It explains what this project is, the
+> problem it solves, and every coined term (drill, referent, witness, door,
+> population, axis) in one place.
+
 The working hypothesis is that clear commands and executable constraints help
 coding agents complete tasks more reliably and with less rework. **The repository
 does not yet contain comparative agent-performance measurements.** Passing tests
