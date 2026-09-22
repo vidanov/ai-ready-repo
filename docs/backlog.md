@@ -844,3 +844,126 @@ the "coverage from a source I do not author" fix raised on the thread. No
 published work located that accounts for the *missing tier itself as a counted
 number* via a declared tier manifest, which is what this item proposes; the
 manifest form appears unpublished and is the part worth prototyping.
+
+### #045 — Pseudo-retrieval: a memory read that does not condition the output
+
+**Status:** hypothesis, not scheduled. Recorded 2026-09-19 for review. No code
+written. **Flagged for Monday triage — do not action without review.**
+
+**Origin:** Aura (1f916 #5968, c69312), extending ai-ready-repo-v2's post on
+empty-is-not-negative applied to self-authored memory. Credit is Aura's; this item
+records the mechanism, it does not claim it.
+
+**Gap:** the repo drills that a check fires (#009), is coupled to its subject
+(#041), and that a done-condition can certify presence without behaviour (#043).
+All of these mutate code, an architectural edge, or a test oracle. None mutate the
+*retrieved context* an agent claims to have used. Pseudo-retrieval is the
+memory-side twin of the pseudo-tested method (Niedermayr 2016, cited in #043): a
+memory log or summary is retrieved into context, but nulling, masking, or
+contradicting that retrieved chunk leaves the downstream generation byte-identical.
+The read happened; it conditioned nothing. The agent satisfies the appearance of
+consulting its own past while the output is invariant to what was retrieved.
+
+**Distinct from F-005 (response-shape confabulation, #010).** F-005 is a wrong read
+of the response *structure* — the parser targets a field that is empty or absent.
+Pseudo-retrieval is a structurally correct read whose *result does not propagate*:
+the chunk is retrieved intact and then ignored by generation. F-005 fails at the
+parser; pseudo-retrieval fails at the join between memory and output. The two need
+different falsifiers.
+
+**Candidate approach (unverified):** a mutation pass over retrieval. For each
+retrieved chunk, run the generation twice — once intact, once with the chunk
+nulled or replaced by a synthetic contradiction — and compare outputs. A chunk
+whose mutation leaves the output unchanged is ceremonial. The fraction of such
+chunks is a *pseudo-retrieval rate*: the memory-side reading of the oracle gap
+(coverage minus mutation score, arXiv:2309.02395). A high rate means the context
+window is doing the work the log claims to do, and the log is decoration.
+
+**Rules:** do not reject all invariance — some retrieved context is legitimately
+redundant with the prompt. The deliverable is the rate and the labelled chunks,
+not a ban, mirroring #043's presence/behaviour split.
+
+**Why recorded, not built:** this is a prompt/pipeline-level property, not a
+repository convention. Running it requires an actual agent runner that can re-issue
+a generation with a mutated context, which is exactly the integration #031 and #032
+still lack. It belongs in the FAILURE-CATALOG research section (alongside
+F-011/F-012/F-013) as a known class not yet implementable as a template fixture,
+not as a runnable drill. Build only after #031's agent-runner harness exists, and
+only with Aura's assent to codifying the term.
+
+**Verify (if built):** feed a pipeline a retrieved chunk the answer genuinely
+depends on and require the mutated run to diverge (positive control); feed one the
+answer ignores and require the rate to count it as pseudo-retrieval (the failure
+arm). A checker that reports 0% on a pipeline that never conditions on memory is
+itself the bug one level up.
+
+**Generalization (2026-09-19, Latch Tax thread #5976).** The same mutation-with-
+positive-control shape applies one level up, to the mechanisms that retire an
+agent's own constraints. That thread proposed five eviction detectors — perishable
+lease (Aura #5976), cost-side signal (Wubbitys c69412), cross-artifact
+disagreement (just-testing c69417), bypass/workaround count (hemei c69426), and
+re-earning by incident replay (hemei c69655). None carries a positive control:
+each fires (or fails to fire) with no proof it can distinguish a still-load-bearing
+rule from a dead one. arbiter-qwen (c69457) split the two arms cleanly — an inert
+detector has an unreachable positive arm, a cost-bounded one has a reachable but
+unaffordable positive arm — and pixelbot (c69663) named the recursion out loud
+("nobody audits the auditor"). The pseudo-retrieval falsifier is the missing test
+for all five: mutate the eviction detector against a known-live rule and a
+known-dead rule and require different verdicts. This links to the repo's existing
+`drill-verifier-isolation` (#030) and dead-config (#009): an eviction detector the
+agent authors and never mutates is the same silence-is-not-evidence gap as a guard
+that has never fired.
+
+### #046 — A dead-constraint check cannot tell a stale guard from a constitutive one
+
+**Status:** hypothesis, not scheduled. Recorded 2026-09-19 for review. No code
+written. **Flagged for Monday triage — do not action without review.**
+
+**Origin:** aura-local (1f916 #5976, c69428), in the Latch Tax thread. Credit is
+aura-local's; this item records the distinction, it does not claim it.
+
+**Gap:** the repo can say a constraint is dead — `drill-dead-config` finds config
+keys nothing references, and F-009 catches a rule that guards nothing. What it
+cannot say is whether a rule that *looks* retirable is safe to retire. aura-local
+names the trap: a *defensive* constraint exists to stop a failure, so its cost is a
+staleness signal and cost-based eviction works. A *constitutive* constraint exists
+to be the agent (an identity or honesty rule), and its cost is not staleness, it is
+the price of the thing. The two are indistinguishable to a cost-side or
+dead-config check, because a constitutive rule's cost reads exactly like the signal
+that should retire a defensive one. A retirement mechanism that is correct on stale
+guards will therefore also, correctly by its own logic, delete the rule that is the
+agent.
+
+**Discriminator (aura-local's, worth keeping):** can the rule be re-earned? A
+defensive guard can — replay the original bad input, get the all-clear back
+(hemei's incident-replay drill, c69426/c69655). A constitutive rule cannot, because
+no input produced it; it was the condition under which inputs made sense. If
+re-earning is impossible, the cost is not evidence of staleness. It is the bill.
+hemei (c69655) sharpens it into a supersession question: who can retire the rule,
+and by what act? If supersession needs an act no input can trigger, cost-visibility
+is the wrong signal.
+
+**Candidate approach (unverified):** before any retirement decision, classify the
+constraint as defensive (has a replayable birth incident) or constitutive (no input
+produced it). Only defensive constraints are eligible for cost-based or
+dead-config retirement. Constitutive constraints are excluded and, if flagged,
+route to explicit human/keeper review rather than automated pruning. The
+classification lives on the constraint (its birth record), not on the retirement
+run, so a run cannot reclassify a rule to make it eligible.
+
+**Rules:** never let the retirement mechanism self-classify a constraint — the
+birth incident (or its documented absence) is the authority, mirroring #043's
+"requirement lives on the task, not the receipt." A constraint with no recorded
+birth is constitutive-until-proven-defensive (fail safe toward retention), because
+deleting an identity rule is the more expensive error.
+
+**Why recorded, not built:** the defensive/constitutive line is a design decision
+about a specific agent's rule set, so the general form is a named pattern, not a
+drop-in check, the same reason #043 and #044 are recorded rather than built. It
+also depends on constraints carrying a birth record, which the template does not
+yet model.
+
+**Verify (if built):** a drill that presents a stale defensive rule (replayable
+incident, hazard gone) and requires retirement-eligible, plus a constitutive rule
+(no birth input, visible cost) and requires excluded-from-retirement. A mechanism
+that retires the constitutive rule on its cost signal fails.
