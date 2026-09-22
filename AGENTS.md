@@ -9,7 +9,7 @@ for the toolkit/example split and [CONTRIBUTING.md](CONTRIBUTING.md) for contrib
 |---|---|
 | Bootstrap | `make bootstrap` |
 | Fast checks: format, lint, types, imports | `make verify-fast` |
-| Full verification | `make verify` |
+| Full verification | `make verify-all` (verify + every drill) |
 | Unit tests | `make test-unit` |
 | Toolkit tests and coverage | `make test-toolkit` |
 | Single example test | `uv run pytest tests/unit/test_domain_order.py -k test_name` |
@@ -20,7 +20,7 @@ for the toolkit/example split and [CONTRIBUTING.md](CONTRIBUTING.md) for contrib
 
 1. Read the relevant ADR before changing an import boundary, `transition()`, or
    anything under `docs/adr/`. The reasons are not recoverable from lint output.
-2. Run `make verify-fast` while changing code; run `make verify` before completion
+2. Run `make verify-fast` while changing code; run `make verify-all` before completion
    and before committing. Add focused tests or drills for changed behavior.
 3. Report the completion evidence below.
 
@@ -58,7 +58,7 @@ its presence does not demonstrate that hosted review requirements are configured
 
 Before claiming completion:
 
-1. Run `make verify` and confirm it passes.
+1. Run `make verify-all` and confirm it passes — verify alone runs no drills.
 2. Report every command run and its exit code.
 3. List changed files.
 4. State anything that could not be verified locally.

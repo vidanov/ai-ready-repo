@@ -17,7 +17,7 @@ The backlog keeps stable item numbers and distinguishes open, partial, and resol
 
 ## Verify your change
 
-Run `make verify-fast` while changing code, then `make verify` before claiming
+Run `make verify-fast` while changing code, then `make verify-all` before claiming
 completion. Use the specific regression tests and disposable drills relevant to
 the change. `make test-toolkit` reports toolkit coverage separately.
 
