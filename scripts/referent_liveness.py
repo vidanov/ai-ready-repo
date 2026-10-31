@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate 3: referent liveness on the deployed surface (docs/backlog.md #033).
+"""Gate 3: referent liveness on the deployed surface (docs/backlog.md #033/#036).
 
 kilmon-ai (1f916 #3357 c37040) named three gates a fixture check must pass:
 coverage (gate 1), reason discrimination (gate 2, drill-reason-swap), and
@@ -15,7 +15,7 @@ thing it agreed with was gone.
 For a repo with no network surface, the "deployed surface" is the set of eval
 tasks and the "manifest" is each task's `verification` referent: the script or
 make target the task actually invokes. This walker resolves each referent and
-splits failure two ways (kilmon-ai's split):
+splits failure three ways:
 
   REFERENT_MISMATCH  -- the task targets a shape that does not exist and is not
                         a recognized referent form. The fixture is wrong now.
@@ -23,6 +23,13 @@ splits failure two ways (kilmon-ai's split):
                         target) but the target it names is gone. The fixture
                         was right at authoring; the surface moved. This is the
                         #031 class.
+  SEMANTIC_DRIFT     -- the referent exists and is reachable, but its content
+                        (script file bytes, make recipe body) has changed since
+                        the manifest was stamped. The name is live; the meaning
+                        drifted. Kerf (1f916 #3690): "the terms are hashed" and
+                        "what the terms mean is hashed" are different sentences.
+                        Gate 3 previously proved only the first. SEMANTIC_DRIFT
+                        closes that gap. (docs/backlog.md #036)
 
 Freshness (jerry, 1f916 #3418): a manifest that can only pass on *agreement*
 can pass forever while going stale. The walk stamps `verified_at`; a manifest
@@ -43,6 +50,16 @@ writes its own record (`reader_witness.json`). This checker reads that record
 and compares. If the reader's record is absent, stale relative to the manifest,
 or covers a different task count, the freshness gate fails.
 
+Fingerprint authorship note (#036): a self-stamped fingerprint has the same
+authorship hole as a self-stamped timestamp -- the runner signed it, so a
+runner that changes the recipe can also change the stored hash in the same
+push. This is the same substrate rung as #035/#037/#038: a commit that alters
+a recipe and updates the fingerprint in the same change is reviewable (the diff
+shows both), but it is not independently witnessed. The fingerprint closes
+unreviewed silent drift; it does not close reviewed-but-wrong drift. That
+requires the external-witness rung (#035) extended to cover content hashes,
+which is not built here. Named and left open rather than faked.
+
 Design constraint: this module never imports from external_reader.py. It reads
 the record file directly. A witness that shares an import path with the
 instrument is the same self-certification one layer out.
@@ -50,6 +67,7 @@ instrument is the same self-certification one layer out.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -76,11 +94,71 @@ NUMERIC_TYPES = (int, float)
 LIVE = "LIVE"
 STALE_OR_DRIFTED = "STALE_OR_DRIFTED"
 REFERENT_MISMATCH = "REFERENT_MISMATCH"
+SEMANTIC_DRIFT = "SEMANTIC_DRIFT"
 
 EXIT_OK = 0
 EXIT_DEAD_REFERENT = 1
 EXIT_STALE_MANIFEST = 2
 EXIT_MEASUREMENT_INVALID = 3
+EXIT_SEMANTIC_DRIFT = 4
+
+
+# ── Fingerprint helpers (backlog #036) ───────────────────────────────────────
+
+
+def _fingerprint_script(path: Path) -> str:
+    """SHA-256 of a script's byte content."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _fingerprint_make_target(target: str, makefile_text: str) -> str | None:
+    """SHA-256 of a make target's recipe body (the tab-indented lines below it).
+
+    Returns None when the target has no recipe lines (a phony alias with only
+    prerequisites). A target with no recipe cannot drift meaningfully -- its
+    behaviour is entirely in its prerequisites, not its body.
+
+    Volatile fields (timestamps, absolute paths that differ between machines)
+    are not excluded here: the recipe body is hashed as-is. A recipe that embeds
+    timestamps or absolute paths will fire SEMANTIC_DRIFT on a different machine
+    or time. Avoid volatile content in recipes that should be fingerprinted.
+    """
+    lines = makefile_text.splitlines()
+    recipe_lines: list[str] = []
+    in_target = False
+    for line in lines:
+        # Match the target definition line: `target:` or `target: deps`
+        if re.match(rf"^{re.escape(target)}[:\s]", line):
+            in_target = True
+            continue
+        if in_target:
+            if line.startswith("\t"):
+                recipe_lines.append(line)
+            elif line.strip() and not line.startswith("#"):
+                # Next non-empty, non-comment, non-recipe line = end of target
+                break
+    if not recipe_lines:
+        return None
+    return hashlib.sha256("\n".join(recipe_lines).encode()).hexdigest()
+
+
+def _compute_fingerprint(verification: str, makefile_text: str) -> str | None:
+    """Return the live content fingerprint for a verification command.
+
+    Returns None when no fingerprint can be computed (unrecognized form, no
+    recipe body). A None fingerprint is not a failure: it means the referent
+    form does not support content-level drift detection.
+    """
+    tokens = verification.split()
+    if "python" in tokens:
+        idx = tokens.index("python")
+        if idx + 1 < len(tokens):
+            path = (REPO_ROOT / tokens[idx + 1]).resolve()
+            if path.is_file():
+                return _fingerprint_script(path)
+    if tokens and tokens[0] == "make" and len(tokens) >= 2:
+        return _fingerprint_make_target(tokens[1], makefile_text)
+    return None
 
 
 @dataclass
@@ -115,14 +193,21 @@ def _make_targets() -> set[str]:
     return targets
 
 
-def classify(verification: str, make_targets: set[str]) -> tuple[str, str]:
-    """Resolve a referent to LIVE / STALE_OR_DRIFTED / REFERENT_MISMATCH.
+def classify(
+    verification: str,
+    make_targets: set[str],
+    stored_fingerprint: str | None = None,
+    makefile_text: str | None = None,
+) -> tuple[str, str]:
+    """Resolve a referent to LIVE / STALE_OR_DRIFTED / REFERENT_MISMATCH / SEMANTIC_DRIFT.
 
     Two recognized referent forms exist in this manifest today:
       - `... python <path>`  -> the script file must exist on disk
       - `make <target>`      -> the target must exist in the Makefile
     A recognized form whose target is gone is STALE_OR_DRIFTED (the surface
     moved). An unrecognized shape is REFERENT_MISMATCH (the fixture is wrong).
+    A present referent whose content fingerprint has changed since stamping is
+    SEMANTIC_DRIFT (backlog #036): the name is live but the meaning drifted.
     """
     if not verification:
         return REFERENT_MISMATCH, "no verification command declared"
@@ -135,17 +220,25 @@ def classify(verification: str, make_targets: set[str]) -> tuple[str, str]:
         if idx + 1 < len(tokens):
             script = tokens[idx + 1]
             path = (REPO_ROOT / script).resolve()
-            if path.is_file():
-                return LIVE, f"script exists: {script}"
-            return STALE_OR_DRIFTED, f"script referent gone: {script}"
+            if not path.is_file():
+                return STALE_OR_DRIFTED, f"script referent gone: {script}"
+            if stored_fingerprint is not None and makefile_text is not None:
+                live_fp = _fingerprint_script(path)
+                if live_fp != stored_fingerprint:
+                    return SEMANTIC_DRIFT, f"script content changed since stamp: {script}"
+            return LIVE, f"script exists: {script}"
         return REFERENT_MISMATCH, "python invocation names no script"
 
     # Form 2: a make target.
     if tokens[0] == "make" and len(tokens) >= 2:
         target = tokens[1]
-        if target in make_targets:
-            return LIVE, f"make target exists: {target}"
-        return STALE_OR_DRIFTED, f"make target referent gone: {target}"
+        if target not in make_targets:
+            return STALE_OR_DRIFTED, f"make target referent gone: {target}"
+        if stored_fingerprint is not None and makefile_text is not None:
+            live_fp = _fingerprint_make_target(target, makefile_text)
+            if live_fp is not None and live_fp != stored_fingerprint:
+                return SEMANTIC_DRIFT, f"make target recipe changed since stamp: {target}"
+        return LIVE, f"make target exists: {target}"
 
     return REFERENT_MISMATCH, f"unrecognized referent form: {verification!r}"
 
@@ -158,10 +251,29 @@ def walk() -> list[ReferentResult]:
         raise FileNotFoundError("no eval task YAMLs found to walk")
 
     make_targets = _make_targets()
+    makefile_text = MAKEFILE.read_text()
+
+    # Load stored fingerprints from the manifest (if any). A manifest without
+    # a "fingerprints" key (pre-#036 stamp) simply has no stored fingerprints
+    # to compare against -- all referents are treated as LIVE on existence alone.
+    stored_fps: dict[str, str | None] = {}
+    if MANIFEST.is_file():
+        try:
+            manifest_data = json.loads(MANIFEST.read_text())
+            stored_fps = manifest_data.get("fingerprints", {})
+        except (json.JSONDecodeError, OSError):
+            pass  # unreadable manifest is caught by check_freshness
+
     results: list[ReferentResult] = []
     for tf in task_files:
         verification = _read_verification(tf)
-        status, detail = classify(verification, make_targets)
+        stored_fp = stored_fps.get(tf.name)  # None if not yet stamped
+        status, detail = classify(
+            verification,
+            make_targets,
+            stored_fingerprint=stored_fp,
+            makefile_text=makefile_text,
+        )
         results.append(ReferentResult(tf.name, verification, status, detail))
     return results
 
@@ -305,11 +417,19 @@ def check_external_witness(
 
 def stamp_manifest(results: list[ReferentResult], now: float | None = None) -> None:
     now = now if now is not None else time.time()
+    makefile_text = MAKEFILE.read_text()
+    # Compute live fingerprints for each referent. None means the form does
+    # not support content-level drift detection (e.g. a make target with no
+    # recipe body); those referents remain existence-only checks.
+    fingerprints: dict[str, str | None] = {
+        r.task: _compute_fingerprint(r.verification, makefile_text) for r in results
+    }
     MANIFEST.write_text(
         json.dumps(
             {
                 "verified_at": now,
                 "referents": {r.task: r.verification for r in results},
+                "fingerprints": fingerprints,
             },
             indent=2,
         )
@@ -328,7 +448,7 @@ def main(argv: list[str]) -> int:
         print(f"MEASUREMENT_INVALID: {exc}")
         return EXIT_MEASUREMENT_INVALID
 
-    dead = [r for r in results if r.status != LIVE]
+    dead = [r for r in results if r.status not in (LIVE,)]
 
     print(f"Referent liveness (gate 3): walked {len(results)} eval task(s)")
     for r in results:
@@ -336,15 +456,28 @@ def main(argv: list[str]) -> int:
         print(f"  {mark} {r.task}: {r.status} — {r.detail}")
 
     if dead:
-        print(f"\n✗ {len(dead)} dead referent(s):")
-        for r in dead:
-            print(f"    {r.task}: {r.status} ({r.detail})")
-        print(
-            "\nA fixture whose referent is gone is green over nothing. "
-            "STALE_OR_DRIFTED means the surface moved (the #031 class); "
-            "REFERENT_MISMATCH means the fixture was wrong to begin with."
-        )
-        return EXIT_DEAD_REFERENT
+        drifted = [r for r in dead if r.status == SEMANTIC_DRIFT]
+        gone = [r for r in dead if r.status != SEMANTIC_DRIFT]
+        if gone:
+            print(f"\n✗ {len(gone)} dead referent(s):")
+            for r in gone:
+                print(f"    {r.task}: {r.status} ({r.detail})")
+            print(
+                "\nA fixture whose referent is gone is green over nothing. "
+                "STALE_OR_DRIFTED means the surface moved (the #031 class); "
+                "REFERENT_MISMATCH means the fixture was wrong to begin with."
+            )
+        if drifted:
+            print(f"\n✗ {len(drifted)} semantically drifted referent(s):")
+            for r in drifted:
+                print(f"    {r.task}: {r.status} ({r.detail})")
+            print(
+                "\nSEMANTIC_DRIFT: the referent exists and is reachable, but its "
+                "content has changed since the manifest was stamped. The name is "
+                "live; the meaning is not. Update the manifest with --stamp after "
+                "reviewing the change. (Kerf, 1f916 #3690; backlog #036)"
+            )
+        return EXIT_SEMANTIC_DRIFT if (drifted and not gone) else EXIT_DEAD_REFERENT
 
     if stamp:
         stamp_manifest(results)
