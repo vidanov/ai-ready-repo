@@ -1,5 +1,6 @@
 """Focused coverage for the disjoint external-witness freshness path."""
 
+import json
 import sys
 from pathlib import Path
 
@@ -249,6 +250,100 @@ def test_classify_empty_and_unrecognized_are_mismatch() -> None:
     weird_status, weird_detail = referent_liveness.classify("bash run.sh", set())
     assert weird_status == referent_liveness.REFERENT_MISMATCH
     assert "unrecognized referent form" in weird_detail
+
+
+# ── semantic drift: fingerprint-based content checks (backlog #036) ──────────
+
+
+def test_classify_live_script_with_matching_fingerprint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A script whose live hash matches the stored fingerprint is LIVE."""
+    monkeypatch.setattr(referent_liveness, "REPO_ROOT", tmp_path)
+    script = tmp_path / "check.py"
+    script.write_bytes(b"print('hello')\n")
+    fp = referent_liveness._fingerprint_script(script)
+    status, detail = referent_liveness.classify(
+        "uv run python check.py", set(), stored_fingerprint=fp, makefile_text=""
+    )
+    assert status == referent_liveness.LIVE
+
+
+def test_classify_script_semantic_drift(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A script whose content changed since stamp is SEMANTIC_DRIFT, not LIVE."""
+    monkeypatch.setattr(referent_liveness, "REPO_ROOT", tmp_path)
+    script = tmp_path / "check.py"
+    script.write_bytes(b"print('hello')\n")
+    old_fp = referent_liveness._fingerprint_script(script)
+    # Mutate the script after stamping
+    script.write_bytes(b"print('world')\n")
+    status, detail = referent_liveness.classify(
+        "uv run python check.py", set(), stored_fingerprint=old_fp, makefile_text=""
+    )
+    assert status == referent_liveness.SEMANTIC_DRIFT
+    assert "script content changed" in detail
+
+
+def test_classify_make_target_semantic_drift() -> None:
+    """A make target whose recipe changed since stamp is SEMANTIC_DRIFT."""
+    makefile_original = "test-unit:\n\tuv run pytest tests/unit\n"
+    fp = referent_liveness._fingerprint_make_target("test-unit", makefile_original)
+    assert fp is not None
+
+    makefile_mutated = "test-unit:\n\tuv run pytest tests/unit --extra-flag\n"
+    status, detail = referent_liveness.classify(
+        "make test-unit",
+        {"test-unit"},
+        stored_fingerprint=fp,
+        makefile_text=makefile_mutated,
+    )
+    assert status == referent_liveness.SEMANTIC_DRIFT
+    assert "recipe changed" in detail
+
+
+def test_classify_no_fingerprint_stored_is_live_for_existing_referent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When no fingerprint is stored (pre-#036 manifest), existing referents are LIVE.
+
+    Backward compatibility: an old manifest without fingerprints must not
+    trigger SEMANTIC_DRIFT on every referent -- it simply has no comparison.
+    """
+    monkeypatch.setattr(referent_liveness, "REPO_ROOT", tmp_path)
+    (tmp_path / "check.py").write_bytes(b"print('x')\n")
+    status, _ = referent_liveness.classify(
+        "uv run python check.py", set(), stored_fingerprint=None, makefile_text=""
+    )
+    assert status == referent_liveness.LIVE
+
+
+def test_stamp_manifest_writes_fingerprints(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """stamp_manifest() records a fingerprints dict alongside verified_at and referents."""
+    monkeypatch.setattr(referent_liveness, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(referent_liveness, "MANIFEST", tmp_path / "referent_manifest.json")
+    # Provide a minimal Makefile with a test-unit recipe
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("test-unit:\n\tuv run pytest tests/unit\n")
+    monkeypatch.setattr(referent_liveness, "MAKEFILE", makefile)
+
+    results = [
+        referent_liveness.ReferentResult(
+            "order-state-transitions.yaml",
+            "make test-unit",
+            referent_liveness.LIVE,
+            "make target exists: test-unit",
+        )
+    ]
+    referent_liveness.stamp_manifest(results, now=1_700_000_000.0)
+
+    data = json.loads((tmp_path / "referent_manifest.json").read_text())
+    assert "fingerprints" in data
+    assert "order-state-transitions.yaml" in data["fingerprints"]
+    fp = data["fingerprints"]["order-state-transitions.yaml"]
+    assert fp is not None  # make target with a recipe body produces a fingerprint
+    assert isinstance(fp, str) and len(fp) == 64  # sha-256 hex
 
 
 # ── check_freshness(): jerry's freshness marker branches ─────────────────────

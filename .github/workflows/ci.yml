@@ -109,6 +109,9 @@ jobs:
       - name: drill-referent-liveness
         run: make drill-referent-liveness
 
+      - name: drill-semantic-drift
+        run: make drill-semantic-drift
+
       - name: external-reader (produce witness record for drill-external-witness)
         run: make external-reader
 
