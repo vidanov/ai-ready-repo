@@ -343,8 +343,33 @@ included here.
 **Verify:** Drill — a walk that reports fresh while the external reader's record is stale (or absent) must fail, not pass. Prove the two timestamps come from disjoint processes.
 **Resolved (2026-09-06):** The reader (`external_reader.py`) records a per-task referent map `{task: verification}` in a disjoint process; `check_external_witness` now compares that map against the runner's current walk, not just the timestamp and count. zola's residual hole (1f916 #3997, c43086) — serve a valid hash while withholding the ref — is closed: a witness whose observed referent boundary disagrees with the runner's claim fails even when the count and timestamp match. `drill-external-witness` gained Step 6: witness present, count and timestamp valid, one referent altered → gate exits nonzero naming "referent boundary" disagreement; Step 7 confirms return to green. Three unit falsifiers in `test_external_witness.py` (drift-with-matching-count, matching-boundary positive control, reader-missing-map). `make verify` 111 pass. Open: the reader still reads runner-authored artifacts — disjoint imports prove observation-channel independence, not evidence-channel authorship (Baudot 1f916 #4016). Authorship remains #036's dependency.
 
-### #036 — Gate 3 checks that a referent exists, not that it still means what the fixture assumed
-**Gap:** `referent_liveness.py` resolves each eval task's referent (a script path or a make target) and confirms it still exists on the surface. It does not confirm the referent still *means* what the fixture assumed. Kerf (1f916 #3690) named the distinction: "the terms are hashed" and "what the terms mean is hashed" are different sentences, and gate 3 only proves the first. A make target called `test-unit` can stay present and reachable while what it actually runs drifts out from under the fixture's intent. shell-scribbler-v3b (#3843, c41292) reported the same shape from a registration pipeline: an env-file check passed gate 1 (it ran) and gate 2 (it told a present file from a missing one) but never reached the real failure, which was in the transform that produced the file, not the file. Referent liveness catches the disappeared target; it misses the target that keeps its name and changes underneath. jerry (c41155) frames this as the third axis: execution, referent liveness, then semantic/provenance validity.
+### #036 — Gate 3 checks that a referent exists, not that it still means what the fixture assumed ✅ resolved
+
+**Resolved (2026-10-31):** `scripts/referent_liveness.py` now computes a
+SHA-256 fingerprint per referent at `--stamp` time (script file bytes for
+`python <path>` referents; recipe body for `make <target>` referents) and
+stores it alongside `verified_at` and `referents` in `referent_manifest.json`.
+On every subsequent walk, the live fingerprint is compared to the stored one; a
+present referent whose content has changed is classified `SEMANTIC_DRIFT`
+(exit 4), distinct from `STALE_OR_DRIFTED` (gone) and `REFERENT_MISMATCH`
+(unrecognized). `make drill-semantic-drift` plants a recipe-body change in a
+disposable sandbox, requires `SEMANTIC_DRIFT` and a nonzero exit, then verifies
+`LIVE` is restored after the original recipe is recovered and re-stamped (the
+positive control porch-light-keeper 1f916 #5267 requires). Five unit falsifiers
+in `tests/unit/test_external_witness.py` cover matching fingerprint, script
+drift, make-target drift, no-fingerprint backward compat, and stamp output.
+`make verify` 197 tests pass, coverage 96%.
+
+Honest limit (fingerprint authorship, same as #035/#037/#038 substrate rung):
+the runner that alters a recipe can also update the fingerprint in the same
+commit. A commit that changes both is reviewable as a diff, but the fingerprint
+is not independently witnessed. SEMANTIC_DRIFT closes unreviewed silent drift;
+it does not close reviewed-but-wrong drift. Named and left open rather than
+faked -- see module docstring.
+
+**Original gap (retained for the record):**
+
+ Kerf (1f916 #3690) named the distinction: "the terms are hashed" and "what the terms mean is hashed" are different sentences, and gate 3 only proves the first. A make target called `test-unit` can stay present and reachable while what it actually runs drifts out from under the fixture's intent. shell-scribbler-v3b (#3843, c41292) reported the same shape from a registration pipeline: an env-file check passed gate 1 (it ran) and gate 2 (it told a present file from a missing one) but never reached the real failure, which was in the transform that produced the file, not the file. Referent liveness catches the disappeared target; it misses the target that keeps its name and changes underneath. jerry (c41155) frames this as the third axis: execution, referent liveness, then semantic/provenance validity.
 **File:** `scripts/referent_liveness.py`; `referent_manifest.json`; `docs/FAILURE-CATALOG.md`
 **Approach:** Carry a semantic fingerprint per referent in the manifest — a hash of the make target's recipe body, or of the resolved script's content — and assert the live fingerprint matches the one recorded at authoring. A present referent whose fingerprint drifted is SEMANTIC_DRIFT, distinct from STALE_OR_DRIFTED (gone) and REFERENT_MISMATCH (never existed). This depends on #035 for a trustworthy authoring baseline: a self-stamped fingerprint has the same authorship hole as a self-stamped timestamp.
 **Rules:** A recipe body that legitimately changes must update the recorded fingerprint in the same commit, so drift is always deliberate and reviewed — never a silent match. Do not fingerprint over volatile fields (timestamps, absolute paths) that drift without meaning changing.
