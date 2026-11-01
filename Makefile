@@ -196,6 +196,10 @@ drill-required-axis: ## Prove a required-but-unexercised axis is rejected, not a
 drill-referent-liveness: ## Prove a fixture whose referent drifted away is reported STALE_OR_DRIFTED, not green (gate 3, 1f916 #3357)
 	@bash scripts/drill_referent_liveness.sh
 
+.PHONY: drill-semantic-drift
+drill-semantic-drift: ## Prove a live referent whose recipe changed is reported SEMANTIC_DRIFT, not green (gate 3 #036, Kerf 1f916 #3690)
+	@bash scripts/drill_semantic_drift.sh
+
 .PHONY: external-reader
 external-reader: ## Run the disjoint witness: reads eval tasks independently, writes reader_witness.json (#035)
 	@uv run python scripts/external_reader.py
