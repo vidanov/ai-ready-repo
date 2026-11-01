@@ -411,7 +411,14 @@ def test_walk_empty_dir_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
 def test_walk_classifies_each_task(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _write_task(tmp_path, "a.yaml", 'verification: "make verify"\n')
     _write_task(tmp_path, "b.yaml", "verification: make gone\n")
+    # Provide a minimal Makefile so walk() can read it for fingerprint computation
+    # (added in #036). No manifest exists, so stored_fps is empty and no
+    # fingerprint comparison fires — this test only checks existence classification.
+    makefile = tmp_path / "Makefile"
+    makefile.write_text("verify:\n\t@echo done\n")
     monkeypatch.setattr(referent_liveness, "EVAL_TASKS_DIR", tmp_path)
+    monkeypatch.setattr(referent_liveness, "MAKEFILE", makefile)
+    monkeypatch.setattr(referent_liveness, "MANIFEST", tmp_path / "referent_manifest.json")
     monkeypatch.setattr(referent_liveness, "_make_targets", lambda: {"verify"})
 
     results = referent_liveness.walk()

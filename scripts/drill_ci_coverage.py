@@ -66,6 +66,8 @@ DRILL_TARGETS = {
     "drill-coverage-floor",
     "drill-required-axis",
     "drill-referent-liveness",
+    "drill-semantic-drift",
+    "drill-skill-liveness",
     "verify-tamperproof",
     "verify-from-git",
     "verify-snapshot",
